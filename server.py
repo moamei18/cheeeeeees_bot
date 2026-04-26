@@ -1,5 +1,9 @@
 from flask import Flask, request, render_template_string, Response
-import os, threading, urllib.parse, urllib.request, time
+import os
+import threading
+import urllib.parse
+import urllib.request
+import time
 import telebot
 from telebot.types import (
     InlineKeyboardMarkup,
@@ -42,7 +46,12 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
 </style>
 </head>
 <body>
-<div class="top"><div class="x">×</div><div class="title">Chess Now</div><div class="icons">⌄ ⋮</div></div>
+
+<div class="top">
+  <div class="x">×</div>
+  <div class="title">Chess Now</div>
+  <div class="icons">⌄ ⋮</div>
+</div>
 
 {% if mode == "wait" %}
 <div class="wait">
@@ -56,7 +65,7 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
   <div class="player">
     <img class="avatar" src="{{ avatar }}">
     <div class="info">{{ name }}<div class="rate">1200</div></div>
-    <div class="timer">◷ {{ time }}:00.0</div>
+    <div class="timer">◷ {{ game_time }}:00.0</div>
   </div>
 
   <div class="board">
@@ -66,32 +75,39 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
   </div>
 
   <div class="player">
-    <div><div class="avatar red"></div><div class="dot"></div></div>
+    <div>
+      <div class="avatar red"></div>
+      <div class="dot"></div>
+    </div>
     <div class="info">.<div class="rate">1200</div></div>
     <div class="timer">◷ 09:55.5</div>
   </div>
   <div class="flag">⚐</div>
 </div>
 {% endif %}
+
 </body>
 </html>
 """
 
 def make_squares():
+    empty = ("", "")
     board = [
         [("♜","black"),("♞","black"),("♝","black"),("♛","black"),("♚","black"),("♝","black"),("♞","black"),("♜","black")],
         [("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [empty,empty,empty,empty,empty,empty,empty,empty],
+        [empty,empty,empty,empty,empty,empty,empty,empty],
+        [empty,empty,empty,empty,empty,empty,empty,empty],
+        [empty,empty,empty,empty,empty,empty,empty,empty],
         [("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white")],
         [("♖","white"),("♘","white"),("♗","white"),("♕","white"),("♔","white"),("♗","white"),("♘","white"),("♖","white")]
     ]
+
     squares = []
     for r in range(8):
         for c in range(8):
-            piece, piece_color = board[r][c]
+            cell = board[r][c]
+            piece, piece_color = cell if len(cell) == 2 else ("", "")
             color = "light" if (r + c) % 2 == 0 else "dark"
             squares.append({"piece": piece, "piece_color": piece_color, "color": color})
     return squares
@@ -101,15 +117,13 @@ def home():
     mode = "game" if request.args.get("play") == "1" else "wait"
     name = request.args.get("name", "fadi")
     game_time = request.args.get("time", "10")
-    avatar = request.args.get("avatar", "")
-    if not avatar:
-        avatar = "https://i.imgur.com/8Km9tLL.jpeg"
+    avatar = request.args.get("avatar", "https://i.imgur.com/8Km9tLL.jpeg")
 
     return render_template_string(
         HTML,
         mode=mode,
         name=name,
-        time=game_time,
+        game_time=game_time,
         avatar=avatar,
         squares=make_squares()
     )
@@ -119,7 +133,9 @@ def avatar_proxy():
     path = request.args.get("path", "")
     if not path:
         return "", 404
+
     url = f"https://api.telegram.org/file/bot{TOKEN}/{path}"
+
     try:
         data = urllib.request.urlopen(url, timeout=10).read()
         return Response(data, mimetype="image/jpeg")
@@ -129,13 +145,15 @@ def avatar_proxy():
 def get_avatar_url(user_id):
     try:
         photos = bot.get_user_profile_photos(user_id, limit=1)
+
         if photos.total_count > 0:
             file_id = photos.photos[0][-1].file_id
             file_info = bot.get_file(file_id)
-            p = urllib.parse.quote(file_info.file_path)
-            return f"{WEB_LINK}/avatar?path={p}"
+            path = urllib.parse.quote(file_info.file_path)
+            return f"{WEB_LINK}/avatar?path={path}"
     except:
         pass
+
     return "https://i.imgur.com/8Km9tLL.jpeg"
 
 @bot.message_handler(commands=["start"])
@@ -143,22 +161,23 @@ def start(message):
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton("Play", switch_inline_query=""))
 
-    bot.send_message(
-        message.chat.id,
+    text = (
         "Want to play chess with any contact from Telegram?\n"
-        "It's very easy to do so, click the button below or go to the chat which you want to send the invitation to, type in @cheesfadi_bot, and add a space.\n"
-        "You can also send the invitation to a group or channel. In that case, the first person to click the 'Join' button will be your opponent.",
-        reply_markup=kb
+        "It's very easy to do so, click the button below or go to the chat which you want to send the invitation to, "
+        "type in @cheesfadi_bot, and add a space.\n"
+        "You can also send the invitation to a group or channel. In that case, the first person to click the 'Join' button will be your opponent."
     )
 
-@bot.inline_handler(func=lambda q: True)
+    bot.send_message(message.chat.id, text, reply_markup=kb)
+
+@bot.inline_handler(func=lambda query: True)
 def inline_query(query):
     user = query.from_user
     name = user.first_name or "fadi"
     avatar = get_avatar_url(user.id)
 
     safe_name = urllib.parse.quote(name)
-    safe_avatar = urllib.parse.quote(avatar, safe=":/?=&.")
+    safe_avatar = urllib.parse.quote(avatar, safe=":/?=&.%")
 
     modes = [
         ("bullet", "Bullet (1|0)", "Timer: 1 min + 0 sec. Random color.", "1"),
@@ -167,8 +186,8 @@ def inline_query(query):
     ]
 
     results = []
+
     for mid, title, desc, minutes in modes:
-        wait_link = f"{WEB_LINK}/?time={minutes}&name={safe_name}&avatar={safe_avatar}"
         join_link = f"{WEB_LINK}/?play=1&time={minutes}&name={safe_name}&avatar={safe_avatar}"
 
         kb = InlineKeyboardMarkup()
@@ -182,7 +201,7 @@ def inline_query(query):
 
         results.append(
             InlineQueryResultArticle(
-                id=mid + str(int(time.time())),
+                id=f"{mid}_{int(time.time())}",
                 title=title,
                 description=desc,
                 input_message_content=InputTextMessageContent(text),
@@ -197,6 +216,7 @@ def run_bot():
         bot.remove_webhook()
     except:
         pass
+
     bot.infinity_polling(skip_pending=True)
 
 threading.Thread(target=run_bot, daemon=True).start()
