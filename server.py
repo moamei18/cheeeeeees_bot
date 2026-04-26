@@ -12,7 +12,7 @@ from telebot.types import (
     InputTextMessageContent,
 )
 
-TOKEN = "8526200321:AAFBCsbnxAJLD-DiL_3QovbK-50qJ6qPQko"
+TOKEN = "8526200321:AAG8Im0iwJqIlfX82KwtFU-H9s34DWEQA2k"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 bot = telebot.TeleBot(TOKEN)
