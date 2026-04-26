@@ -9,13 +9,12 @@ HTML = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chess Now</title>
 <style>
-body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
+body{margin:0;background:#dcecf8;font-family:Arial;color:#000}
 .top{height:75px;display:flex;align-items:center;gap:35px;padding:0 28px;font-size:32px;font-weight:bold;border-bottom:1px solid #c8d6e0}
-.close{font-size:46px;font-weight:300}.menu{margin-left:auto}
-.page{min-height:calc(100vh - 75px);position:relative}
+.close{font-size:46px}.menu{margin-left:auto}
 .wait{height:calc(100vh - 75px);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-size:23px}
 .vs{display:flex;align-items:center;gap:28px}.line{height:65px;width:1px;background:#b8c4cc}
-.avatar{width:90px;height:90px;border-radius:50%;object-fit:cover;position:relative}
+.avatar{width:90px;height:90px;border-radius:50%;object-fit:cover}
 .red{background:radial-gradient(circle at 35% 35%,#ff6d75,#bd3038)}
 .dot{width:20px;height:20px;background:#000;border:4px solid #dcecf8;border-radius:50%;margin-left:62px;margin-top:-22px;position:relative}
 .spinner{margin-top:25px;width:28px;height:28px;border:4px solid #ccc;border-top-color:#777;border-radius:50%;animation:spin 1s linear infinite}
@@ -24,21 +23,16 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
 .player{display:flex;align-items:center;padding:0 16px;margin-bottom:10px}
 .info{margin-left:12px;font-size:24px;font-weight:bold}.rate{font-size:19px;font-weight:normal;margin-top:6px}
 .timer{margin-left:auto;background:#cfe0ee;border-radius:14px;padding:15px 18px;font-size:27px;font-weight:bold}
-.board{width:100vw;height:100vw;max-height:690px;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
-.sq{display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:bold}
+.board{width:100vw;height:100vw;display:grid;grid-template-columns:repeat(8,1fr)}
+.sq{display:flex;align-items:center;justify-content:center;font-size:44px}
 .light{background:#f0d9b5}.dark{background:#b88762}
-.black{color:#000}.white{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}
-.bottom{margin-top:18px}
-.flag{font-size:36px;color:#999;margin-left:30px}
+.white{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}.black{color:#000}
+.bottom{margin-top:18px}.flag{font-size:36px;color:#999;margin-left:30px}
 .playbtn{margin-top:25px;background:#111;color:white;border:0;border-radius:14px;padding:14px 35px;font-size:22px}
 </style>
 </head>
 <body>
-<div class="top">
-  <span class="close">×</span>
-  <span>Chess Now</span>
-  <span class="menu">⌄ ⋮</span>
-</div>
+<div class="top"><span class="close">×</span><span>Chess Now</span><span class="menu">⌄ ⋮</span></div>
 
 {% if mode == "wait" %}
 <div class="wait">
@@ -60,18 +54,13 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
   </div>
 
   <div class="board">
-    {% for row in board %}
-      {% for cell in row %}
-        <div class="sq {{ 'light' if (loop.index0 + loop.parent.index0) % 2 == 0 else 'dark' }} {{ cell[1] }}">
-          {{ cell[0] }}
-        </div>
-      {% endfor %}
+    {% for sq in squares %}
+      <div class="sq {{ sq.color }} {{ sq.piece_color }}">{{ sq.piece }}</div>
     {% endfor %}
   </div>
 
   <div class="player bottom">
     <img class="avatar" src="{{ avatar }}">
-    <div class="dot"></div>
     <div class="info">{{ name }} ♟<div class="rate">1200</div></div>
     <div class="timer">◷ {{time}}:00.0</div>
   </div>
@@ -87,21 +76,27 @@ def home():
     mode = "game" if request.args.get("play") == "1" else "wait"
     time = request.args.get("time", "10")
     name = request.args.get("name", "fadi")
-
-    avatar = "https://i.ibb.co/6Jj3M8S/avatar.jpg"
+    avatar = "https://i.imgur.com/8Km9tLL.jpeg"
 
     board = [
         [("♖","white"),("♘","white"),("♗","white"),("♔","white"),("♕","white"),("♗","white"),("♘","white"),("♖","white")],
         [("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("","")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("","")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("","")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("","")],
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
         [("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black")],
         [("♜","black"),("♞","black"),("♝","black"),("♚","black"),("♛","black"),("♝","black"),("♞","black"),("♜","black")]
     ]
 
-    return render_template_string(HTML, mode=mode, time=time, name=name, avatar=avatar, board=board)
+    squares = []
+    for r in range(8):
+        for c in range(8):
+            piece, piece_color = board[r][c]
+            color = "light" if (r + c) % 2 == 0 else "dark"
+            squares.append({"piece": piece, "piece_color": piece_color, "color": color})
+
+    return render_template_string(HTML, mode=mode, time=time, name=name, avatar=avatar, squares=squares)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
