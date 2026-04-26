@@ -5,7 +5,7 @@ import chess
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultArticle, InputTextMessageContent
 
-TOKEN = "8526200321:AAETu5AiWwaBF-BrPErx3HfWgh_TuGvzIDM"
+TOKEN = "8526200321:AAG8RV_rW2rtsDTZEYVmig9PPKXe4hAhlYs"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 app = Flask(__name__)
@@ -119,6 +119,10 @@ function drawPieces(){
     el.innerText=pieces[p.type][p.color];
     el.style.transform=pos(r,c);
     el.dataset.square=sq;
+    el.onclick=(e)=>{
+      e.stopPropagation();
+      tapSquare(sq);
+    };
     el.onpointerdown=(e)=>startDrag(e,el,sq);
     boardEl.appendChild(el);
   }
@@ -132,16 +136,27 @@ function render(){
 function tapSquare(sq){
   if(over)return;
   if((ROLE==="w"&&turn!=="w")||(ROLE==="b"&&turn!=="b"))return;
+
   if(selected){
     socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});
-    selected=null;legal=[];return;
+    selected=null;legal=[];
+    return;
   }
+
   socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
 }
 
 function startDrag(e,el,sq){
+  if(selected && selected !== sq){
+    socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});
+    selected=null;
+    legal=[];
+    return;
+  }
+
   if(over)return;
   if((ROLE==="w"&&turn!=="w")||(ROLE==="b"&&turn!=="b"))return;
+
   selected=sq;
   socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
   dragging={el,sq};
