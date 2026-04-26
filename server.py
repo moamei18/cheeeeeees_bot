@@ -1,10 +1,14 @@
 from flask import Flask, request, render_template_string
 import os
 import threading
+import urllib.parse
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+# حط توكن بوتك هنا
 TOKEN = "8526200321:AAGBRYS738lVYJY94WaoglW8HNDc5HVz5Zk"
+
+# رابط Railway مالك
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 bot = telebot.TeleBot(TOKEN)
@@ -18,11 +22,11 @@ HTML = """
 <title>Chess Now</title>
 <style>
 body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
-.top{height:74px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #c8d6e0;background:#dcecf8}
+.top{height:74px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #c8d6e0}
 .x{font-size:46px;margin-right:34px}.title{font-size:34px;font-weight:700}.icons{margin-left:auto;font-size:36px}
 .wait{height:calc(100vh - 74px);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#9aa5ad}
 .vs{display:flex;align-items:center;gap:28px}
-.avatar{width:76px;height:76px;border-radius:50%;object-fit:cover}
+.avatar{width:78px;height:78px;border-radius:50%;object-fit:cover;background:#ccc}
 .red{background:radial-gradient(circle at 35% 35%,#ff6973,#bd3038)}
 .line{height:64px;width:1px;background:#bac7d1}
 .dot{width:18px;height:18px;background:#000;border:4px solid #dcecf8;border-radius:50%;margin-left:52px;margin-top:-20px}
@@ -36,7 +40,7 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
 .board{width:100vw;height:100vw;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
 .sq{display:flex;align-items:center;justify-content:center;font-size:43px;font-weight:bold}
 .light{background:#f0d9b5}.dark{background:#b88762}
-.white{color:white;text-shadow:0 0 2px #000,0 0 2px #000,0 0 2px #000}.black{color:#000}
+.white{color:white;text-shadow:0 0 2px #000,0 0 2px #000}.black{color:#000}
 .flag{font-size:34px;color:#999;margin-left:28px;margin-top:12px}
 </style>
 </head>
@@ -57,10 +61,10 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
   </div>
   <div class="waittxt">Waiting for {{ name }} to connect</div>
   <div class="loader"></div>
-  <button class="btn" onclick="location.href='/?play=1&time={{ time }}&name={{ name }}'">Play</button>
+  <button class="btn" onclick="location.href='/?play=1&time={{ time }}&name={{ name }}&avatar={{ avatar }}'">Play</button>
 </div>
 {% else %}
-<div class="game">
+<div>
   <div class="player">
     <div><div class="avatar red"></div><div class="dot"></div></div>
     <div class="info">لاعب الخصم ♟<div class="rate">1200</div></div>
@@ -111,17 +115,56 @@ def home():
     mode = "game" if request.args.get("play") == "1" else "wait"
     time = request.args.get("time", "10")
     name = request.args.get("name", "fadi")
-    avatar = "https://i.imgur.com/8Km9tLL.jpeg"
-    return render_template_string(HTML, mode=mode, time=time, name=name, avatar=avatar, squares=make_squares())
+    avatar = request.args.get("avatar", "https://i.imgur.com/8Km9tLL.jpeg")
+
+    return render_template_string(
+        HTML,
+        mode=mode,
+        time=time,
+        name=name,
+        avatar=avatar,
+        squares=make_squares()
+    )
 
 @bot.message_handler(commands=["start"])
 def start(message):
+    user = message.from_user
+    name = user.first_name or "Player"
+
+    avatar = "https://i.imgur.com/8Km9tLL.jpeg"
+
+    try:
+        photos = bot.get_user_profile_photos(user.id, limit=1)
+        if photos.total_count > 0:
+            file_id = photos.photos[0][-1].file_id
+            file_info = bot.get_file(file_id)
+            avatar = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+    except:
+        pass
+
+    safe_name = urllib.parse.quote(name)
+    safe_avatar = urllib.parse.quote(avatar, safe=":/?=&.")
+
     kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("♟ ابدأ لعبة الشطرنج", url=WEB_LINK + "/?time=10&name=fadi"))
-    bot.send_message(message.chat.id, "🔥 اهلاً بك في بوت الشطرنج\nاضغط الزر وابدأ اللعب", reply_markup=kb)
+    kb.add(
+        InlineKeyboardButton("⏱ 5 دقائق", url=f"{WEB_LINK}/?time=5&name={safe_name}&avatar={safe_avatar}"),
+        InlineKeyboardButton("⏱ 10 دقائق", url=f"{WEB_LINK}/?time=10&name={safe_name}&avatar={safe_avatar}")
+    )
+    kb.add(
+        InlineKeyboardButton("⏱ 15 دقيقة", url=f"{WEB_LINK}/?time=15&name={safe_name}&avatar={safe_avatar}")
+    )
+
+    bot.send_message(
+        message.chat.id,
+        "♟ أهلاً بك في بوت الشطرنج\nاختار وقت المباراة وادخل قائمة الانتظار 🔥",
+        reply_markup=kb
+    )
 
 def run_bot():
-    bot.remove_webhook()
+    try:
+        bot.remove_webhook()
+    except:
+        pass
     bot.infinity_polling(skip_pending=True)
 
 threading.Thread(target=run_bot, daemon=True).start()
