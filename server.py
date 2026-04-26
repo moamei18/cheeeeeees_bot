@@ -1,14 +1,14 @@
-from flask import Flask, request, render_template_string
-import os
-import threading
-import urllib.parse
+from flask import Flask, request, render_template_string, Response
+import os, threading, urllib.parse, urllib.request, time
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
+)
 
-# حط توكن بوتك هنا
 TOKEN = "8526200321:AAGBRYS738lVYJY94WaoglW8HNDc5HVz5Zk"
-
-# رابط Railway مالك
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 bot = telebot.TeleBot(TOKEN)
@@ -25,15 +25,12 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
 .top{height:74px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #c8d6e0}
 .x{font-size:46px;margin-right:34px}.title{font-size:34px;font-weight:700}.icons{margin-left:auto;font-size:36px}
 .wait{height:calc(100vh - 74px);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#9aa5ad}
-.vs{display:flex;align-items:center;gap:28px}
 .avatar{width:78px;height:78px;border-radius:50%;object-fit:cover;background:#ccc}
 .red{background:radial-gradient(circle at 35% 35%,#ff6973,#bd3038)}
-.line{height:64px;width:1px;background:#bac7d1}
 .dot{width:18px;height:18px;background:#000;border:4px solid #dcecf8;border-radius:50%;margin-left:52px;margin-top:-20px}
 .waittxt{font-size:22px;margin-top:20px}
 .loader{margin-top:18px;width:28px;height:28px;border:4px solid #c6cfd6;border-top-color:#777;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.btn{margin-top:25px;border:0;border-radius:14px;background:#111;color:#fff;padding:13px 34px;font-size:21px}
 .player{display:flex;align-items:center;padding:15px 16px 10px}
 .info{margin-left:12px;font-size:22px;font-weight:700}.rate{font-size:18px;font-weight:400;margin-top:5px}
 .timer{margin-left:auto;background:#cfe0ee;border-radius:14px;padding:14px 18px;font-size:26px;font-weight:700}
@@ -45,30 +42,21 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
 </style>
 </head>
 <body>
-
-<div class="top">
-  <div class="x">×</div>
-  <div class="title">Chess Now</div>
-  <div class="icons">⌄ ⋮</div>
-</div>
+<div class="top"><div class="x">×</div><div class="title">Chess Now</div><div class="icons">⌄ ⋮</div></div>
 
 {% if mode == "wait" %}
 <div class="wait">
-  <div class="vs">
-    <div><div class="avatar red"></div><div class="dot"></div></div>
-    <div class="line"></div>
-    <img class="avatar" src="{{ avatar }}">
-  </div>
-  <div class="waittxt">Waiting for {{ name }} to connect</div>
+  <img class="avatar" src="{{ avatar }}">
+  <div class="dot"></div>
+  <div class="waittxt">Waiting for anyone to join</div>
   <div class="loader"></div>
-  <button class="btn" onclick="location.href='/?play=1&time={{ time }}&name={{ name }}&avatar={{ avatar }}'">Play</button>
 </div>
 {% else %}
 <div>
   <div class="player">
-    <div><div class="avatar red"></div><div class="dot"></div></div>
-    <div class="info">لاعب الخصم ♟<div class="rate">1200</div></div>
-    <div class="timer">◷ 09:54.9</div>
+    <img class="avatar" src="{{ avatar }}">
+    <div class="info">{{ name }}<div class="rate">1200</div></div>
+    <div class="timer">◷ {{ time }}:00.0</div>
   </div>
 
   <div class="board">
@@ -78,30 +66,28 @@ body{margin:0;background:#dcecf8;font-family:Arial,sans-serif;color:#000}
   </div>
 
   <div class="player">
-    <img class="avatar" src="{{ avatar }}">
-    <div class="info">{{ name }} ♟<div class="rate">1200</div></div>
-    <div class="timer">◷ {{ time }}:00.0</div>
+    <div><div class="avatar red"></div><div class="dot"></div></div>
+    <div class="info">.<div class="rate">1200</div></div>
+    <div class="timer">◷ 09:55.5</div>
   </div>
   <div class="flag">⚐</div>
 </div>
 {% endif %}
-
 </body>
 </html>
 """
 
 def make_squares():
     board = [
-        [("♖","white"),("♘","white"),("♗","white"),("♔","white"),("♕","white"),("♗","white"),("♘","white"),("♖","white")],
-        [("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
-        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("♜","black"),("♞","black"),("♝","black"),("♛","black"),("♚","black"),("♝","black"),("♞","black"),("♜","black")],
         [("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black"),("♟","black")],
-        [("♜","black"),("♞","black"),("♝","black"),("♚","black"),("♛","black"),("♝","black"),("♞","black"),("♜","black")]
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("",""),("",""),("",""),("",""),("",""),("",""),("",""),("")],
+        [("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white"),("♙","white")],
+        [("♖","white"),("♘","white"),("♗","white"),("♕","white"),("♔","white"),("♗","white"),("♘","white"),("♖","white")]
     ]
-
     squares = []
     for r in range(8):
         for c in range(8):
@@ -113,52 +99,98 @@ def make_squares():
 @app.route("/")
 def home():
     mode = "game" if request.args.get("play") == "1" else "wait"
-    time = request.args.get("time", "10")
     name = request.args.get("name", "fadi")
-    avatar = request.args.get("avatar", "https://i.imgur.com/8Km9tLL.jpeg")
+    game_time = request.args.get("time", "10")
+    avatar = request.args.get("avatar", "")
+    if not avatar:
+        avatar = "https://i.imgur.com/8Km9tLL.jpeg"
 
     return render_template_string(
         HTML,
         mode=mode,
-        time=time,
         name=name,
+        time=game_time,
         avatar=avatar,
         squares=make_squares()
     )
 
-@bot.message_handler(commands=["start"])
-def start(message):
-    user = message.from_user
-    name = user.first_name or "Player"
-
-    avatar = "https://i.imgur.com/8Km9tLL.jpeg"
-
+@app.route("/avatar")
+def avatar_proxy():
+    path = request.args.get("path", "")
+    if not path:
+        return "", 404
+    url = f"https://api.telegram.org/file/bot{TOKEN}/{path}"
     try:
-        photos = bot.get_user_profile_photos(user.id, limit=1)
+        data = urllib.request.urlopen(url, timeout=10).read()
+        return Response(data, mimetype="image/jpeg")
+    except:
+        return "", 404
+
+def get_avatar_url(user_id):
+    try:
+        photos = bot.get_user_profile_photos(user_id, limit=1)
         if photos.total_count > 0:
             file_id = photos.photos[0][-1].file_id
             file_info = bot.get_file(file_id)
-            avatar = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+            p = urllib.parse.quote(file_info.file_path)
+            return f"{WEB_LINK}/avatar?path={p}"
     except:
         pass
+    return "https://i.imgur.com/8Km9tLL.jpeg"
+
+@bot.message_handler(commands=["start"])
+def start(message):
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("Play", switch_inline_query=""))
+
+    bot.send_message(
+        message.chat.id,
+        "Want to play chess with any contact from Telegram?\n"
+        "It's very easy to do so, click the button below or go to the chat which you want to send the invitation to, type in @cheesfadi_bot, and add a space.\n"
+        "You can also send the invitation to a group or channel. In that case, the first person to click the 'Join' button will be your opponent.",
+        reply_markup=kb
+    )
+
+@bot.inline_handler(func=lambda q: True)
+def inline_query(query):
+    user = query.from_user
+    name = user.first_name or "fadi"
+    avatar = get_avatar_url(user.id)
 
     safe_name = urllib.parse.quote(name)
     safe_avatar = urllib.parse.quote(avatar, safe=":/?=&.")
 
-    kb = InlineKeyboardMarkup()
-    kb.add(
-        InlineKeyboardButton("⏱ 5 دقائق", url=f"{WEB_LINK}/?time=5&name={safe_name}&avatar={safe_avatar}"),
-        InlineKeyboardButton("⏱ 10 دقائق", url=f"{WEB_LINK}/?time=10&name={safe_name}&avatar={safe_avatar}")
-    )
-    kb.add(
-        InlineKeyboardButton("⏱ 15 دقيقة", url=f"{WEB_LINK}/?time=15&name={safe_name}&avatar={safe_avatar}")
-    )
+    modes = [
+        ("bullet", "Bullet (1|0)", "Timer: 1 min + 0 sec. Random color.", "1"),
+        ("blitz", "Blitz (3|2)", "Timer: 3 min + 2 sec. Random color.", "3"),
+        ("rapid", "Rapid (10|5)", "Timer: 10 min + 5 sec. Random color.", "10"),
+    ]
 
-    bot.send_message(
-        message.chat.id,
-        "♟ أهلاً بك في بوت الشطرنج\nاختار وقت المباراة وادخل قائمة الانتظار 🔥",
-        reply_markup=kb
-    )
+    results = []
+    for mid, title, desc, minutes in modes:
+        wait_link = f"{WEB_LINK}/?time={minutes}&name={safe_name}&avatar={safe_avatar}"
+        join_link = f"{WEB_LINK}/?play=1&time={minutes}&name={safe_name}&avatar={safe_avatar}"
+
+        kb = InlineKeyboardMarkup()
+        kb.add(InlineKeyboardButton("Join", url=join_link))
+
+        text = (
+            f"User {name} wants to play chess.\n\n"
+            f"Game Rules: {desc}\n\n"
+            f"Click the button below to join the game."
+        )
+
+        results.append(
+            InlineQueryResultArticle(
+                id=mid + str(int(time.time())),
+                title=title,
+                description=desc,
+                input_message_content=InputTextMessageContent(text),
+                reply_markup=kb
+            )
+        )
+
+    bot.answer_inline_query(query.id, results, cache_time=1, is_personal=True)
 
 def run_bot():
     try:
