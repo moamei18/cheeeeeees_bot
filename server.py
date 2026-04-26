@@ -4,7 +4,7 @@ import telebot
 import chess
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultArticle, InputTextMessageContent
 
-TOKEN = "8526200321:AAFgl9bTFJLrGGJIfcx22n-IBvczUjRS4dI"
+TOKEN = "8526200321:AAFkQRkgzCaXvoS9uSUvmM0yGFx_S5ck0bA"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 bot = telebot.TeleBot(TOKEN)
@@ -25,7 +25,7 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow-x:hidden}
 .avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#ccc}
 .info{margin-left:12px;font-size:22px;font-weight:800}.rate{font-size:18px;font-weight:400;margin-top:4px}
 .timer{margin-left:auto;background:#cfe0ee;border-radius:16px;padding:14px 22px;font-size:28px;font-weight:900}
-.board{width:100vw;height:100vw;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);margin:0;padding:0}
+.board{width:100vw;height:100vw;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
 .sq{display:flex;align-items:center;justify-content:center;font-size:39px;font-weight:bold;user-select:none;line-height:1;overflow:hidden}
 .light{background:#f0d9b5}.dark{background:#b88762}
 .sel{outline:4px solid #ffe066;outline-offset:-4px}
@@ -38,17 +38,17 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow-x:hidden}
 <div class="top"><div class="x">×</div><div class="title">Chess Now</div><div class="icons">⌄ ⋮</div></div>
 
 <div class="player">
-  <img class="avatar" src="{{ black_avatar }}">
-  <div class="info" id="blackName">{{ black_name }}<div class="rate">1200</div></div>
-  <div class="timer" id="blackTimer">◷ 00:00</div>
+  <img class="avatar" id="topAvatar" src="">
+  <div class="info" id="topName">Opponent<div class="rate">1200</div></div>
+  <div class="timer" id="topTimer">◷ 00:00</div>
 </div>
 
 <div class="board" id="board"></div>
 
 <div class="player">
-  <img class="avatar" src="{{ white_avatar }}">
-  <div class="info" id="whiteName">{{ white_name }}<div class="rate">1200</div></div>
-  <div class="timer" id="whiteTimer">◷ 00:00</div>
+  <img class="avatar" id="bottomAvatar" src="">
+  <div class="info" id="bottomName">Me<div class="rate">1200</div></div>
+  <div class="timer" id="bottomTimer">◷ 00:00</div>
 </div>
 
 <div class="msg" id="msg">Loading...</div>
@@ -56,6 +56,12 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow-x:hidden}
 <script>
 const GAME_ID="{{ game_id }}";
 const ROLE="{{ role }}";
+
+const whiteName="{{ white_name }}";
+const blackName="{{ black_name }}";
+const whiteAvatar="{{ white_avatar }}";
+const blackAvatar="{{ black_avatar }}";
+
 let selected=null;
 let legal=[];
 let lastFen="";
@@ -65,6 +71,20 @@ const pieces={
   b:{w:"♗",b:"♝"}, q:{w:"♕",b:"♛"}, k:{w:"♔",b:"♚"}
 };
 
+function setupNames(){
+  if(ROLE==="w"){
+    topAvatar.src=blackAvatar;
+    topName.innerHTML=blackName+'<div class="rate">1200</div>';
+    bottomAvatar.src=whiteAvatar;
+    bottomName.innerHTML=whiteName+'<div class="rate">1200</div>';
+  }else{
+    topAvatar.src=whiteAvatar;
+    topName.innerHTML=whiteName+'<div class="rate">1200</div>';
+    bottomAvatar.src=blackAvatar;
+    bottomName.innerHTML=blackName+'<div class="rate">1200</div>';
+  }
+}
+
 function fmt(s){
   s=Math.max(0,Math.floor(s));
   let m=Math.floor(s/60), r=s%60;
@@ -73,7 +93,11 @@ function fmt(s){
 
 function sqName(r,c){
   const files=["a","b","c","d","e","f","g","h"];
-  return files[c]+(8-r);
+  if(ROLE==="w"){
+    return files[c]+(8-r);
+  }else{
+    return files[7-c]+(r+1);
+  }
 }
 
 async function loadState(){
@@ -81,15 +105,29 @@ async function loadState(){
     const res=await fetch(`/state?game=${GAME_ID}`);
     const data=await res.json();
 
-    document.getElementById("whiteTimer").innerText="◷ "+fmt(data.white_time);
-    document.getElementById("blackTimer").innerText="◷ "+fmt(data.black_time);
-    document.getElementById("msg").innerText=data.message;
+    if(ROLE==="w"){
+      topTimer.innerText="◷ "+fmt(data.black_time);
+      bottomTimer.innerText="◷ "+fmt(data.white_time);
+    }else{
+      topTimer.innerText="◷ "+fmt(data.white_time);
+      bottomTimer.innerText="◷ "+fmt(data.black_time);
+    }
+
+    msg.innerText=data.message;
 
     if(data.fen !== lastFen){
       lastFen=data.fen;
       draw(data.board, data.turn, data.over);
     }
   }catch(e){}
+}
+
+function getPieceFromBoard(b, r, c){
+  if(ROLE==="w"){
+    return b[r][c];
+  }else{
+    return b[7-r][7-c];
+  }
 }
 
 function draw(b, turn, over){
@@ -105,7 +143,7 @@ function draw(b, turn, over){
       if(selected===sq) div.classList.add("sel");
       if(legal.includes(sq)) div.classList.add("move");
 
-      const p=b[r][c];
+      const p=getPieceFromBoard(b,r,c);
       if(p){
         div.innerText=pieces[p.type][p.color];
         div.classList.add(p.color==="w"?"white":"black");
@@ -149,6 +187,7 @@ async function tap(sq, turn, over){
   loadState();
 }
 
+setupNames();
 setInterval(loadState,120);
 loadState();
 </script>
