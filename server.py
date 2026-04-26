@@ -4,7 +4,7 @@ import telebot
 import chess
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultArticle, InputTextMessageContent
 
-TOKEN = "8526200321:AAHZIyIDOhD8PiOCMbB2bgrEnMJWXhKQdcs"
+TOKEN = "8526200321:AAFgl9bTFJLrGGJIfcx22n-IBvczUjRS4dI"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 bot = telebot.TeleBot(TOKEN)
@@ -18,22 +18,20 @@ HTML = """
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Chess Now</title>
 <style>
-body{margin:0;background:#dcecf8;font-family:Arial;color:#000}
-.top{height:74px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #c8d6e0}
-.x{font-size:46px;margin-right:34px}.title{font-size:34px;font-weight:700}.icons{margin-left:auto;font-size:36px}
-.player{display:flex;align-items:center;padding:15px 16px 10px}
-.avatar{width:78px;height:78px;border-radius:50%;object-fit:cover;background:#ccc}
-.red{background:radial-gradient(circle at 35% 35%,#ff6973,#bd3038)}
-.dot{width:18px;height:18px;background:#000;border:4px solid #dcecf8;border-radius:50%;margin-left:52px;margin-top:-20px}
-.info{margin-left:12px;font-size:22px;font-weight:700}.rate{font-size:18px;font-weight:400;margin-top:5px}
-.timer{margin-left:auto;background:#cfe0ee;border-radius:14px;padding:14px 18px;font-size:26px;font-weight:700}
-.board{width:100vw;height:100vw;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
-.sq{display:flex;align-items:center;justify-content:center;font-size:43px;font-weight:bold;user-select:none}
+body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow-x:hidden}
+.top{height:72px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #c8d6e0}
+.x{font-size:44px;margin-right:34px}.title{font-size:32px;font-weight:800}.icons{margin-left:auto;font-size:34px}
+.player{display:flex;align-items:center;padding:12px 16px;min-height:88px}
+.avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#ccc}
+.info{margin-left:12px;font-size:22px;font-weight:800}.rate{font-size:18px;font-weight:400;margin-top:4px}
+.timer{margin-left:auto;background:#cfe0ee;border-radius:16px;padding:14px 22px;font-size:28px;font-weight:900}
+.board{width:100vw;height:100vw;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);margin:0;padding:0}
+.sq{display:flex;align-items:center;justify-content:center;font-size:39px;font-weight:bold;user-select:none;line-height:1;overflow:hidden}
 .light{background:#f0d9b5}.dark{background:#b88762}
 .sel{outline:4px solid #ffe066;outline-offset:-4px}
 .move{box-shadow:inset 0 0 0 6px rgba(30,150,70,.45)}
 .white{color:white;text-shadow:0 0 2px #000,0 0 2px #000}.black{color:#000}
-.msg{text-align:center;font-size:20px;margin:8px}
+.msg{text-align:center;font-size:22px;margin:10px}
 </style>
 </head>
 <body>
@@ -60,6 +58,7 @@ const GAME_ID="{{ game_id }}";
 const ROLE="{{ role }}";
 let selected=null;
 let legal=[];
+let lastFen="";
 
 const pieces={
   p:{w:"♙",b:"♟"}, r:{w:"♖",b:"♜"}, n:{w:"♘",b:"♞"},
@@ -78,14 +77,19 @@ function sqName(r,c){
 }
 
 async function loadState(){
-  const res=await fetch(`/state?game=${GAME_ID}`);
-  const data=await res.json();
+  try{
+    const res=await fetch(`/state?game=${GAME_ID}`);
+    const data=await res.json();
 
-  document.getElementById("whiteTimer").innerText="◷ "+fmt(data.white_time);
-  document.getElementById("blackTimer").innerText="◷ "+fmt(data.black_time);
-  document.getElementById("msg").innerText=data.message;
+    document.getElementById("whiteTimer").innerText="◷ "+fmt(data.white_time);
+    document.getElementById("blackTimer").innerText="◷ "+fmt(data.black_time);
+    document.getElementById("msg").innerText=data.message;
 
-  draw(data.board, data.turn, data.over);
+    if(data.fen !== lastFen){
+      lastFen=data.fen;
+      draw(data.board, data.turn, data.over);
+    }
+  }catch(e){}
 }
 
 function draw(b, turn, over){
@@ -118,28 +122,34 @@ async function tap(sq, turn, over){
   if((ROLE==="w" && turn!=="w") || (ROLE==="b" && turn!=="b")) return;
 
   if(selected){
-    const res=await fetch("/move",{
+    await fetch("/move",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({game:GAME_ID, from:selected, to:sq, role:ROLE})
     });
-    selected=null; legal=[];
-    await loadState();
+    selected=null;
+    legal=[];
+    lastFen="";
+    loadState();
     return;
   }
 
   const res=await fetch(`/legal?game=${GAME_ID}&square=${sq}&role=${ROLE}`);
   const data=await res.json();
+
   if(data.ok){
     selected=sq;
     legal=data.moves;
   }else{
-    selected=null; legal=[];
+    selected=null;
+    legal=[];
   }
-  await loadState();
+
+  lastFen="";
+  loadState();
 }
 
-setInterval(loadState,1000);
+setInterval(loadState,120);
 loadState();
 </script>
 </body>
@@ -187,8 +197,8 @@ def home():
     role=request.args.get("role","w")
     minutes=int(request.args.get("time","10"))
 
-    white_name=request.args.get("white_name","White")
-    black_name=request.args.get("black_name","Black")
+    white_name=request.args.get("white_name","fadi")
+    black_name=request.args.get("black_name","Opponent")
     white_avatar=request.args.get("white_avatar","https://i.imgur.com/8Km9tLL.jpeg")
     black_avatar=request.args.get("black_avatar","https://i.imgur.com/8Km9tLL.jpeg")
 
@@ -229,6 +239,7 @@ def state():
 
     return jsonify({
         "board": board_json(board),
+        "fen": board.fen(),
         "turn": "w" if board.turn == chess.WHITE else "b",
         "white_time": int(g["white_time"]),
         "black_time": int(g["black_time"]),
@@ -278,11 +289,11 @@ def move():
         return jsonify({"ok":False})
 
     try:
-        move=chess.Move.from_uci(frm+to)
-        if move not in board.legal_moves:
-            move=chess.Move.from_uci(frm+to+"q")
-        if move in board.legal_moves:
-            board.push(move)
+        mv=chess.Move.from_uci(frm+to)
+        if mv not in board.legal_moves:
+            mv=chess.Move.from_uci(frm+to+"q")
+        if mv in board.legal_moves:
+            board.push(mv)
             g["last"]=time.time()
             return jsonify({"ok":True})
     except:
