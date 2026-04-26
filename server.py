@@ -1,6 +1,7 @@
-from flask import Flask, request, render_template_string, Response
-import os, threading, urllib.parse, urllib.request, time
+from flask import Flask, request, jsonify, render_template_string, Response
+import os, threading, time, urllib.parse, urllib.request
 import telebot
+import chess
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultArticle, InputTextMessageContent
 
 TOKEN = "8526200321:AAG8Im0iwJqIlfX82KwtFU-H9s34DWEQA2k"
@@ -8,6 +9,7 @@ WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
+games = {}
 
 HTML = """
 <!DOCTYPE html>
@@ -15,7 +17,6 @@ HTML = """
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Chess Now</title>
-<script src="https://cdn.jsdelivr.net/npm/chess.js@1.0.0-beta.8/dist/chess.min.js"></script>
 <style>
 body{margin:0;background:#dcecf8;font-family:Arial;color:#000}
 .top{height:74px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #c8d6e0}
@@ -32,7 +33,6 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000}
 .sel{outline:4px solid #ffe066;outline-offset:-4px}
 .move{box-shadow:inset 0 0 0 6px rgba(30,150,70,.45)}
 .white{color:white;text-shadow:0 0 2px #000,0 0 2px #000}.black{color:#000}
-.flag{font-size:34px;color:#999;margin-left:28px;margin-top:12px}
 .msg{text-align:center;font-size:20px;margin:8px}
 </style>
 </head>
@@ -40,74 +40,66 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000}
 <div class="top"><div class="x">×</div><div class="title">Chess Now</div><div class="icons">⌄ ⋮</div></div>
 
 <div class="player">
-  <img class="avatar" src="{{ avatar }}">
-  <div class="info">{{ name }}<div class="rate">1200</div></div>
-  <div class="timer" id="blackTimer">◷ {{ time }}:00</div>
+  <img class="avatar" src="{{ black_avatar }}">
+  <div class="info" id="blackName">{{ black_name }}<div class="rate">1200</div></div>
+  <div class="timer" id="blackTimer">◷ 00:00</div>
 </div>
 
 <div class="board" id="board"></div>
 
 <div class="player">
-  <div><div class="avatar red"></div><div class="dot"></div></div>
-  <div class="info">.<div class="rate">1200</div></div>
-  <div class="timer" id="whiteTimer">◷ {{ time }}:00</div>
+  <img class="avatar" src="{{ white_avatar }}">
+  <div class="info" id="whiteName">{{ white_name }}<div class="rate">1200</div></div>
+  <div class="timer" id="whiteTimer">◷ 00:00</div>
 </div>
-<div class="flag">⚐</div>
-<div class="msg" id="msg">دور الأبيض</div>
+
+<div class="msg" id="msg">Loading...</div>
 
 <script>
-const game = new Chess();
-const boardEl = document.getElementById("board");
-const msg = document.getElementById("msg");
-let selected = null;
-let legal = [];
-let baseTime = {{ seconds }};
-let whiteTime = baseTime;
-let blackTime = baseTime;
+const GAME_ID="{{ game_id }}";
+const ROLE="{{ role }}";
+let selected=null;
+let legal=[];
 
-const pieces = {
+const pieces={
   p:{w:"♙",b:"♟"}, r:{w:"♖",b:"♜"}, n:{w:"♘",b:"♞"},
   b:{w:"♗",b:"♝"}, q:{w:"♕",b:"♛"}, k:{w:"♔",b:"♚"}
 };
 
 function fmt(s){
-  s=Math.max(0,s);
-  let m=Math.floor(s/60);
-  let r=s%60;
+  s=Math.max(0,Math.floor(s));
+  let m=Math.floor(s/60), r=s%60;
   return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
 }
 
-function updateTimers(){
-  document.getElementById("whiteTimer").innerText="◷ "+fmt(whiteTime);
-  document.getElementById("blackTimer").innerText="◷ "+fmt(blackTime);
-}
-
-setInterval(()=>{
-  if(game.isGameOver()) return;
-  if(game.turn()==="w") whiteTime--; else blackTime--;
-  updateTimers();
-  if(whiteTime<=0) msg.innerText="انتهى وقت الأبيض";
-  if(blackTime<=0) msg.innerText="انتهى وقت الأسود";
-},1000);
-
-function squareName(r,c){
+function sqName(r,c){
   const files=["a","b","c","d","e","f","g","h"];
   return files[c]+(8-r);
 }
 
-function draw(){
-  boardEl.innerHTML="";
-  const b = game.board();
+async function loadState(){
+  const res=await fetch(`/state?game=${GAME_ID}`);
+  const data=await res.json();
+
+  document.getElementById("whiteTimer").innerText="◷ "+fmt(data.white_time);
+  document.getElementById("blackTimer").innerText="◷ "+fmt(data.black_time);
+  document.getElementById("msg").innerText=data.message;
+
+  draw(data.board, data.turn, data.over);
+}
+
+function draw(b, turn, over){
+  const board=document.getElementById("board");
+  board.innerHTML="";
 
   for(let r=0;r<8;r++){
     for(let c=0;c<8;c++){
-      const sqName = squareName(r,c);
+      const sq=sqName(r,c);
       const div=document.createElement("div");
       div.className="sq "+(((r+c)%2==0)?"light":"dark");
-      div.dataset.square=sqName;
 
-      if(selected===sqName) div.classList.add("sel");
-      if(legal.includes(sqName)) div.classList.add("move");
+      if(selected===sq) div.classList.add("sel");
+      if(legal.includes(sq)) div.classList.add("move");
 
       const p=b[r][c];
       if(p){
@@ -115,81 +107,208 @@ function draw(){
         div.classList.add(p.color==="w"?"white":"black");
       }
 
-      div.onclick=()=>tap(sqName);
-      boardEl.appendChild(div);
+      div.onclick=()=>tap(sq, turn, over);
+      board.appendChild(div);
     }
   }
-
-  if(game.isCheckmate()) msg.innerText="كش مات";
-  else if(game.isDraw()) msg.innerText="تعادل";
-  else msg.innerText=game.turn()==="w" ? "دور الأبيض" : "دور الأسود";
 }
 
-function tap(sq){
-  if(game.isGameOver()) return;
+async function tap(sq, turn, over){
+  if(over) return;
+  if((ROLE==="w" && turn!=="w") || (ROLE==="b" && turn!=="b")) return;
 
   if(selected){
-    const move = game.move({from:selected,to:sq,promotion:"q"});
-    selected=null;
-    legal=[];
-    if(move){ draw(); return; }
+    const res=await fetch("/move",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({game:GAME_ID, from:selected, to:sq, role:ROLE})
+    });
+    selected=null; legal=[];
+    await loadState();
+    return;
   }
 
-  const piece = game.get(sq);
-  if(piece && piece.color===game.turn()){
+  const res=await fetch(`/legal?game=${GAME_ID}&square=${sq}&role=${ROLE}`);
+  const data=await res.json();
+  if(data.ok){
     selected=sq;
-    legal=game.moves({square:sq, verbose:true}).map(m=>m.to);
-  } else {
-    selected=null;
-    legal=[];
+    legal=data.moves;
+  }else{
+    selected=null; legal=[];
   }
-  draw();
+  await loadState();
 }
 
-updateTimers();
-draw();
+setInterval(loadState,1000);
+loadState();
 </script>
 </body>
 </html>
 """
 
+def get_game(game_id, minutes=10):
+    if game_id not in games:
+        games[game_id] = {
+            "board": chess.Board(),
+            "white_time": minutes * 60,
+            "black_time": minutes * 60,
+            "last": time.time(),
+            "minutes": minutes
+        }
+    return games[game_id]
+
+def update_clock(g):
+    now = time.time()
+    diff = now - g["last"]
+    if not g["board"].is_game_over():
+        if g["board"].turn == chess.WHITE:
+            g["white_time"] -= diff
+        else:
+            g["black_time"] -= diff
+    g["last"] = now
+
+def board_json(board):
+    out=[]
+    for r in range(8):
+        row=[]
+        for c in range(8):
+            sq=chess.square(c, 7-r)
+            p=board.piece_at(sq)
+            if p:
+                row.append({"type": p.symbol().lower(), "color": "w" if p.color == chess.WHITE else "b"})
+            else:
+                row.append(None)
+        out.append(row)
+    return out
+
 @app.route("/")
 def home():
-    name = request.args.get("name", "fadi")
-    game_time = request.args.get("time", "10")
-    avatar = request.args.get("avatar", "https://i.imgur.com/8Km9tLL.jpeg")
-    try:
-        minutes = int(game_time)
-    except:
-        minutes = 10
+    game_id=request.args.get("game","solo")
+    role=request.args.get("role","w")
+    minutes=int(request.args.get("time","10"))
+
+    white_name=request.args.get("white_name","White")
+    black_name=request.args.get("black_name","Black")
+    white_avatar=request.args.get("white_avatar","https://i.imgur.com/8Km9tLL.jpeg")
+    black_avatar=request.args.get("black_avatar","https://i.imgur.com/8Km9tLL.jpeg")
+
+    get_game(game_id, minutes)
 
     return render_template_string(
         HTML,
-        name=name,
-        time=minutes,
-        seconds=minutes*60,
-        avatar=avatar
+        game_id=game_id,
+        role=role,
+        white_name=white_name,
+        black_name=black_name,
+        white_avatar=white_avatar,
+        black_avatar=black_avatar
     )
+
+@app.route("/state")
+def state():
+    game_id=request.args.get("game","solo")
+    g=get_game(game_id)
+    update_clock(g)
+    board=g["board"]
+
+    if g["white_time"] <= 0:
+        msg="انتهى وقت الأبيض"
+        over=True
+    elif g["black_time"] <= 0:
+        msg="انتهى وقت الأسود"
+        over=True
+    elif board.is_checkmate():
+        msg="كش مات"
+        over=True
+    elif board.is_stalemate():
+        msg="تعادل"
+        over=True
+    else:
+        msg="دور الأبيض" if board.turn == chess.WHITE else "دور الأسود"
+        over=False
+
+    return jsonify({
+        "board": board_json(board),
+        "turn": "w" if board.turn == chess.WHITE else "b",
+        "white_time": int(g["white_time"]),
+        "black_time": int(g["black_time"]),
+        "message": msg,
+        "over": over
+    })
+
+@app.route("/legal")
+def legal():
+    game_id=request.args.get("game","solo")
+    square=request.args.get("square","")
+    role=request.args.get("role","w")
+    g=get_game(game_id)
+    board=g["board"]
+
+    if (role=="w" and board.turn != chess.WHITE) or (role=="b" and board.turn != chess.BLACK):
+        return jsonify({"ok":False,"moves":[]})
+
+    try:
+        sq=chess.parse_square(square)
+    except:
+        return jsonify({"ok":False,"moves":[]})
+
+    piece=board.piece_at(sq)
+    if not piece:
+        return jsonify({"ok":False,"moves":[]})
+
+    if (role=="w" and piece.color != chess.WHITE) or (role=="b" and piece.color != chess.BLACK):
+        return jsonify({"ok":False,"moves":[]})
+
+    moves=[chess.square_name(m.to_square) for m in board.legal_moves if m.from_square == sq]
+    return jsonify({"ok":True,"moves":moves})
+
+@app.route("/move", methods=["POST"])
+def move():
+    data=request.get_json()
+    game_id=data.get("game","solo")
+    frm=data.get("from")
+    to=data.get("to")
+    role=data.get("role","w")
+
+    g=get_game(game_id)
+    update_clock(g)
+    board=g["board"]
+
+    if (role=="w" and board.turn != chess.WHITE) or (role=="b" and board.turn != chess.BLACK):
+        return jsonify({"ok":False})
+
+    try:
+        move=chess.Move.from_uci(frm+to)
+        if move not in board.legal_moves:
+            move=chess.Move.from_uci(frm+to+"q")
+        if move in board.legal_moves:
+            board.push(move)
+            g["last"]=time.time()
+            return jsonify({"ok":True})
+    except:
+        pass
+
+    return jsonify({"ok":False})
 
 @app.route("/avatar")
 def avatar_proxy():
-    path = request.args.get("path", "")
+    path=request.args.get("path","")
     if not path:
-        return "", 404
+        return "",404
     try:
-        url = f"https://api.telegram.org/file/bot{TOKEN}/{path}"
-        data = urllib.request.urlopen(url, timeout=10).read()
-        return Response(data, mimetype="image/jpeg")
+        url=f"https://api.telegram.org/file/bot{TOKEN}/{path}"
+        data=urllib.request.urlopen(url,timeout=10).read()
+        return Response(data,mimetype="image/jpeg")
     except:
-        return "", 404
+        return "",404
 
 def get_avatar_url(user_id):
     try:
-        photos = bot.get_user_profile_photos(user_id, limit=1)
+        photos=bot.get_user_profile_photos(user_id,limit=1)
         if photos.total_count > 0:
-            file_id = photos.photos[0][-1].file_id
-            file_info = bot.get_file(file_id)
-            path = urllib.parse.quote(file_info.file_path)
+            file_id=photos.photos[0][-1].file_id
+            file_info=bot.get_file(file_id)
+            path=urllib.parse.quote(file_info.file_path)
             return f"{WEB_LINK}/avatar?path={path}"
     except:
         pass
@@ -197,25 +316,24 @@ def get_avatar_url(user_id):
 
 @bot.message_handler(commands=["start"])
 def start(message):
-    kb = InlineKeyboardMarkup()
+    kb=InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton("Play", switch_inline_query=""))
     bot.send_message(
         message.chat.id,
-        "Want to play chess with any contact from Telegram?\\n"
-        "Click Play, choose a chat, then select the game mode.",
+        "Want to play chess with any contact from Telegram?\nClick Play and choose a chat.",
         reply_markup=kb
     )
 
 @bot.inline_handler(func=lambda q: True)
 def inline_query(query):
-    user = query.from_user
-    name = user.first_name or "fadi"
-    avatar = get_avatar_url(user.id)
+    user=query.from_user
+    name=user.first_name or "Player"
+    avatar=get_avatar_url(user.id)
 
-    safe_name = urllib.parse.quote(name)
-    safe_avatar = urllib.parse.quote(avatar, safe=":/?=&.%")
+    safe_name=urllib.parse.quote(name)
+    safe_avatar=urllib.parse.quote(avatar, safe=":/?=&.%")
 
-    modes = [
+    modes=[
         ("bullet","Bullet (1|0)","Timer: 1 min + 0 sec. Random color.","1"),
         ("blitz","Blitz (3|2)","Timer: 3 min + 2 sec. Random color.","3"),
         ("rapid","Rapid (10|5)","Timer: 10 min + 5 sec. Random color.","10"),
@@ -223,15 +341,20 @@ def inline_query(query):
 
     results=[]
     for mid,title,desc,minutes in modes:
-        link=f"{WEB_LINK}/?time={minutes}&name={safe_name}&avatar={safe_avatar}"
-        kb=InlineKeyboardMarkup()
-        kb.add(InlineKeyboardButton("Join", url=link))
+        game_id=f"{user.id}_{int(time.time())}_{mid}"
 
-        text=f"User {name} wants to play chess.\\n\\nGame Rules: {desc}\\n\\nClick the button below to join the game."
+        start_link=f"{WEB_LINK}/?game={game_id}&role=w&time={minutes}&white_name={safe_name}&white_avatar={safe_avatar}&black_name=Opponent"
+        join_link=f"{WEB_LINK}/?game={game_id}&role=b&time={minutes}&white_name={safe_name}&white_avatar={safe_avatar}&black_name=Opponent"
+
+        kb=InlineKeyboardMarkup()
+        kb.add(InlineKeyboardButton("Start", url=start_link))
+        kb.add(InlineKeyboardButton("Join", url=join_link))
+
+        text=f"User {name} wants to play chess.\n\nGame Rules: {desc}\n\nPress Start if you created it, or Join if you are the opponent."
 
         results.append(
             InlineQueryResultArticle(
-                id=f"{mid}_{int(time.time())}",
+                id=f"{game_id}",
                 title=title,
                 description=desc,
                 input_message_content=InputTextMessageContent(text),
