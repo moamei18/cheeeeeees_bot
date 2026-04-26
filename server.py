@@ -8,7 +8,7 @@ from telebot.types import (
     InlineQueryResultArticle, InputTextMessageContent
 )
 
-TOKEN = "8526200321:AAEy8eFXV7vwP3eRYyvYCI4Q08mI2P3f6fo"
+TOKEN = "8526200321:AAH2PXUUL5Zzue-Hkf8Q1HecJo6YMwW-Kco"
 BOT_USERNAME = "cheesfadi_bot"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
@@ -122,7 +122,6 @@ function visualToSq(r,c){
 }
 
 function pos(r,c){return `translate(${c*100}%,${r*100}%)`}
-
 function getPiece(r,c){return ROLE==="w"?boardData[r][c]:boardData[7-r][7-c]}
 
 function drawSquares(){
@@ -153,8 +152,7 @@ function drawPieces(){
     el.onpointerdown=(e)=>startDrag(e,el,sq);
 
     let img=document.createElement("img");
-    let code=(p.color==="w"?"w":"b")+p.type.toUpperCase()+".svg";
-    img.src=pieceBase+code;
+    img.src=pieceBase+(p.color==="w"?"w":"b")+p.type.toUpperCase()+".svg";
     el.appendChild(img);
 
     boardEl.appendChild(el);
@@ -310,8 +308,7 @@ def emit_state(game_id):
     b=g["board"]
 
     if g["status"]=="waiting":
-        msg="Waiting for opponent to join"
-        over=False
+        msg="Waiting for opponent to join"; over=False
     elif g["white_time"]<=0:
         msg="انتهى وقت الأبيض"; over=True
     elif g["black_time"]<=0:
@@ -481,9 +478,6 @@ def inline_query(query):
         name=f"{name} (@{user.username})"
     avatar=get_avatar_url(user.id)
 
-    safe_name=urllib.parse.quote(name)
-    safe_avatar=urllib.parse.quote(avatar,safe=":/?=&.%")
-
     modes=[
         ("bullet","Bullet (1|0)","Timer: 1 min + 0 sec. Random color.","1"),
         ("blitz","Blitz (3|2)","Timer: 3 min + 2 sec. Random color.","3"),
@@ -521,6 +515,7 @@ def chosen_inline(chosen):
     try:
         game_id=chosen.result_id
         g=get_game(game_id)
+
         safe_name=urllib.parse.quote(g["white_name"])
         safe_avatar=urllib.parse.quote(g["white_avatar"],safe=":/?=&.%")
         link=f"{WEB_LINK}/?game={game_id}&role=w&time={g['minutes']}&white_name={safe_name}&white_avatar={safe_avatar}"
