@@ -3,12 +3,9 @@ from flask_socketio import SocketIO, join_room, emit
 import os, time, threading, urllib.parse, urllib.request
 import chess
 import telebot
-from telebot.types import (
-    InlineKeyboardMarkup, InlineKeyboardButton,
-    InlineQueryResultArticle, InputTextMessageContent
-)
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultArticle, InputTextMessageContent
 
-TOKEN = "8526200321:AAH2PXUUL5Zzue-Hkf8Q1HecJo6YMwW-Kco"
+TOKEN = "8526200321:AAElLrTKyYyrrDM6hPOnFLWS9uCkdQlOU8U"
 BOT_USERNAME = "cheesfadi_bot"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
@@ -37,10 +34,10 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow-x:hidden}
 .board{width:100vw;height:100vw;position:relative;touch-action:none}
 .square{position:absolute;width:12.5%;height:12.5%}
 .light{background:#f0d9b5}.dark{background:#b88762}
-.piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .12s linear}
+.piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .08s linear}
 .piece img{width:88%;height:88%;pointer-events:none}
 .sel{box-shadow:inset 0 0 0 5px #d8c52c}
-.move::after{content:"";width:26px;height:26px;background:rgba(90,90,90,.35);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.move::after{content:"";width:26px;height:26px;background:rgba(80,80,80,.35);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 .last{background:#d7c52d!important}
 .check{background:#e35b5b!important}
 .msg{text-align:center;font-size:22px;margin:10px}
@@ -100,12 +97,16 @@ const pieceBase="https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piec
 
 function setupNames(){
   if(ROLE==="w"){
-    topAvatar.src=blackAvatar; topName.innerHTML=blackName+'<div class="rate">1200</div>';
-    bottomAvatar.src=whiteAvatar; bottomName.innerHTML=whiteName+'<div class="rate">1200</div>';
+    topAvatar.src=blackAvatar;
+    topName.innerHTML=blackName+'<div class="rate">1200</div>';
+    bottomAvatar.src=whiteAvatar;
+    bottomName.innerHTML=whiteName+'<div class="rate">1200</div>';
     waitAvatar.src=whiteAvatar;
   }else{
-    topAvatar.src=whiteAvatar; topName.innerHTML=whiteName+'<div class="rate">1200</div>';
-    bottomAvatar.src=blackAvatar; bottomName.innerHTML=blackName+'<div class="rate">1200</div>';
+    topAvatar.src=whiteAvatar;
+    topName.innerHTML=whiteName+'<div class="rate">1200</div>';
+    bottomAvatar.src=blackAvatar;
+    bottomName.innerHTML=blackName+'<div class="rate">1200</div>';
     waitAvatar.src=blackAvatar;
   }
 }
@@ -208,7 +209,7 @@ function endDrag(e){
   c=Math.max(0,Math.min(7,c)); r=Math.max(0,Math.min(7,r));
   const to=visualToSq(r,c);
   socket.emit("move",{game:GAME_ID,from:dragging.sq,to:to,role:ROLE});
-  dragging.el.style.transition="transform .12s linear";
+  dragging.el.style.transition="transform .08s linear";
   dragging=null; selected=null; legal=[];
 }
 
@@ -244,14 +245,14 @@ socket.on("state",(d)=>{
   render();
 
   if(checkSquare){
-    setTimeout(()=>{checkSquare=null;render();},650);
+    setTimeout(()=>{checkSquare=null;render();},500);
   }
 });
 
 socket.on("legal_moves",(d)=>{selected=d.square;legal=d.moves;render()});
 
 setupNames();
-setInterval(()=>socket.emit("get_state",{game:GAME_ID}),700);
+setInterval(()=>socket.emit("get_state",{game:GAME_ID}),900);
 </script>
 </body>
 </html>
@@ -266,7 +267,7 @@ def get_game(game_id, minutes=10):
             "last":time.time(),
             "minutes":minutes,
             "status":"waiting",
-            "white_name":"fadi",
+            "white_name":"White",
             "black_name":"Opponent",
             "white_avatar":"https://i.imgur.com/8Km9tLL.jpeg",
             "black_avatar":"https://i.imgur.com/8Km9tLL.jpeg",
@@ -281,8 +282,10 @@ def update_clock(g):
     now=time.time()
     diff=now-g["last"]
     if not g["board"].is_game_over():
-        if g["board"].turn==chess.WHITE:g["white_time"]-=diff
-        else:g["black_time"]-=diff
+        if g["board"].turn==chess.WHITE:
+            g["white_time"]-=diff
+        else:
+            g["black_time"]-=diff
     g["last"]=now
 
 def board_json(board):
@@ -379,17 +382,22 @@ def ws_legal(data):
     role=data.get("role","w")
     g=get_game(game)
     b=g["board"]
+
     if g["status"]!="playing":
         return emit("legal_moves",{"square":sq_name,"moves":[]})
+
     try:
         sq=chess.parse_square(sq_name)
     except:
         return emit("legal_moves",{"square":sq_name,"moves":[]})
+
     p=b.piece_at(sq)
     if not p:
         return emit("legal_moves",{"square":sq_name,"moves":[]})
+
     if (role=="w" and (b.turn!=chess.WHITE or p.color!=chess.WHITE)) or (role=="b" and (b.turn!=chess.BLACK or p.color!=chess.BLACK)):
         return emit("legal_moves",{"square":sq_name,"moves":[]})
+
     moves=[chess.square_name(m.to_square) for m in b.legal_moves if m.from_square==sq]
     emit("legal_moves",{"square":sq_name,"moves":moves})
 
@@ -399,13 +407,17 @@ def ws_move(data):
     frm=data.get("from")
     to=data.get("to")
     role=data.get("role","w")
+
     g=get_game(game)
     update_clock(g)
     b=g["board"]
+
     if g["status"]!="playing":
         return
+
     if (role=="w" and b.turn!=chess.WHITE) or (role=="b" and b.turn!=chess.BLACK):
         return
+
     try:
         mv=chess.Move.from_uci(frm+to)
         if mv not in b.legal_moves:
@@ -421,7 +433,8 @@ def ws_move(data):
 @app.route("/avatar")
 def avatar_proxy():
     path=request.args.get("path","")
-    if not path:return "",404
+    if not path:
+        return "",404
     try:
         data=urllib.request.urlopen(f"https://api.telegram.org/file/bot{TOKEN}/{path}",timeout=10).read()
         return Response(data,mimetype="image/jpeg")
@@ -478,6 +491,9 @@ def inline_query(query):
         name=f"{name} (@{user.username})"
     avatar=get_avatar_url(user.id)
 
+    safe_name=urllib.parse.quote(name)
+    safe_avatar=urllib.parse.quote(avatar,safe=":/?=&.%")
+
     modes=[
         ("bullet","Bullet (1|0)","Timer: 1 min + 0 sec. Random color.","1"),
         ("blitz","Blitz (3|2)","Timer: 3 min + 2 sec. Random color.","3"),
@@ -491,12 +507,14 @@ def inline_query(query):
         g["white_name"]=name
         g["white_avatar"]=avatar
 
+        start_link=f"{WEB_LINK}/?game={game_id}&role=w&time={minutes}&white_name={safe_name}&white_avatar={safe_avatar}"
         join_deep=f"https://t.me/{BOT_USERNAME}?start=join_{game_id}"
 
         kb=InlineKeyboardMarkup()
+        kb.add(InlineKeyboardButton("Start",url=start_link))
         kb.add(InlineKeyboardButton("Join",url=join_deep))
 
-        text=f"User {name} wants to play chess.\\n\\nGame Rules: {desc}\\n\\nClick Join to enter the game."
+        text=f"User {name} wants to play chess.\\n\\nGame Rules: {desc}\\n\\nStart = creator\\nJoin = opponent"
 
         results.append(
             InlineQueryResultArticle(
@@ -509,23 +527,6 @@ def inline_query(query):
         )
 
     bot.answer_inline_query(query.id,results,cache_time=1,is_personal=True)
-
-@bot.chosen_inline_handler(func=lambda chosen: True)
-def chosen_inline(chosen):
-    try:
-        game_id=chosen.result_id
-        g=get_game(game_id)
-
-        safe_name=urllib.parse.quote(g["white_name"])
-        safe_avatar=urllib.parse.quote(g["white_avatar"],safe=":/?=&.%")
-        link=f"{WEB_LINK}/?game={game_id}&role=w&time={g['minutes']}&white_name={safe_name}&white_avatar={safe_avatar}"
-
-        kb=InlineKeyboardMarkup()
-        kb.add(InlineKeyboardButton("Open Waiting Room",url=link))
-
-        bot.send_message(chosen.from_user.id,"تم إنشاء مباراة ✅\nافتح غرفة الانتظار:",reply_markup=kb)
-    except:
-        pass
 
 def run_bot():
     try:
