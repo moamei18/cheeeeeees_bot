@@ -7,6 +7,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = "8526200321:AAGK439-ind7RpCtyYRCZQQpHcU4XZ1qCKU"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
+GAME_SHORT_NAME = "fadichess"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "chess_secret"
