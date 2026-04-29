@@ -1,12 +1,12 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, Response
 from flask_socketio import SocketIO, join_room, emit
-import os, time, threading
+import os, time, threading, urllib.parse, urllib.request
 import chess
 import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = "8526200321:AAEKQd9JUahwE9OmGLqi5oYQ-iHELCPZXWo"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
-GAME_SHORT_NAME = "fadichess"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "chess_secret"
@@ -98,23 +98,9 @@ let MINUTES={{ minutes }};
 
 let boardData=null, turn="w", over=false, selected=null, legal=[], dragging=null;
 let lastMove=[], checkSquare=null;
-let lastSoundId=0;
 
 const boardEl=document.getElementById("board");
 const pieceBase="https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piece/cburnett/";
-
-const soundMove = new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3");
-const soundCapture = new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3");
-const soundCheck = new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3");
-soundMove.preload="auto"; soundCapture.preload="auto"; soundCheck.preload="auto";
-
-function playSound(type){
-  try{
-    let s = type==="check" ? soundCheck : type==="capture" ? soundCapture : soundMove;
-    s.currentTime = 0;
-    s.play().catch(()=>{});
-  }catch(e){}
-}
 
 function showOnly(id){
   ["home","modes","wait","game"].forEach(x=>document.getElementById(x).style.display="none");
@@ -236,11 +222,6 @@ socket.on("state",(d)=>{
   topName.innerHTML=d.top_name+'<div class="rate">1200</div>';
   bottomName.innerHTML=d.bottom_name+'<div class="rate">1200</div>';
 
-  if(d.sound_id && d.sound_id !== lastSoundId){
-    lastSoundId = d.sound_id;
-    playSound(d.sound_type);
-  }
-
   if(d.status==="waiting"){showOnly("wait");return}
   showOnly("game");
 
@@ -277,9 +258,7 @@ def get_game(game_id, minutes=10):
             "black_name":"Opponent",
             "white_avatar":default_avatar(),
             "black_avatar":default_avatar(),
-            "last_move":[],
-            "sound_id":0,
-            "sound_type":"move"
+            "last_move":[]
         }
     return games[game_id]
 
@@ -332,9 +311,7 @@ def emit_state(game_id):
         "top_avatar":g["black_avatar"],
         "bottom_avatar":g["white_avatar"],
         "top_time":int(g["black_time"]),
-        "bottom_time":int(g["white_time"]),
-        "sound_id":g["sound_id"],
-        "sound_type":g["sound_type"]
+        "bottom_time":int(g["white_time"])
     }, room=game_id)
 
 @app.route("/")
@@ -347,7 +324,7 @@ def home():
 
 @socketio.on("create_game")
 def create_game(data):
-    get_game(data["game"],int(data.get("time",10)))
+    g=get_game(data["game"],int(data.get("time",10)))
     join_room(data["game"])
     emit_state(data["game"])
 
@@ -362,6 +339,10 @@ def join_game(data):
         g["status"]="playing"
         g["last"]=time.time()
     emit_state(game)
+
+@socketio.on("get_state")
+def get_state(data):
+    emit_state(data.get("game"))
 
 @socketio.on("legal")
 def legal(data):
@@ -385,34 +366,19 @@ def move(data):
     if (role=="w" and b.turn!=chess.WHITE) or (role=="b" and b.turn!=chess.BLACK): return
     try:
         mv=chess.Move.from_uci(data["from"]+data["to"])
-        if mv not in b.legal_moves:
-            mv=chess.Move.from_uci(data["from"]+data["to"]+"q")
+        if mv not in b.legal_moves: mv=chess.Move.from_uci(data["from"]+data["to"]+"q")
         if mv in b.legal_moves:
-            is_capture = b.is_capture(mv)
             b.push(mv)
-
             g["last_move"]=[data["from"],data["to"]]
             g["last"]=time.time()
-            g["sound_id"] += 1
-
-            if b.is_check():
-                g["sound_type"]="check"
-            elif is_capture:
-                g["sound_type"]="capture"
-            else:
-                g["sound_type"]="move"
-
             emit_state(data["game"])
-    except:
-        pass
+    except: pass
 
 @bot.message_handler(commands=["start"])
 def start(msg):
-    bot.send_game(msg.chat.id, GAME_SHORT_NAME)
-
-@bot.callback_query_handler(func=lambda call: True)
-def game_callback(call):
-    bot.answer_callback_query(call.id, url=WEB_LINK)
+    kb=InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("🎮 العب الشطرنج",url=WEB_LINK))
+    bot.send_message(msg.chat.id,"اضغط وابدأ لعبة شطرنج 🔥",reply_markup=kb)
 
 def run_bot():
     try: bot.remove_webhook()
