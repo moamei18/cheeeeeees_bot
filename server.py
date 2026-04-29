@@ -5,7 +5,7 @@ import chess
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "8526200321:AAGK439-ind7RpCtyYRCZQQpHcU4XZ1qCKU"
+TOKEN = "8526200321:AAGTzzaslctOE3WxUO4TAEymMga3Smd2WGA"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 GAME_SHORT_NAME = "fadichess"
 
@@ -377,9 +377,12 @@ def move(data):
 
 @bot.message_handler(commands=["start"])
 def start(msg):
-    kb=InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("🎮 العب الشطرنج",url=WEB_LINK))
-    bot.send_message(msg.chat.id,"اضغط وابدأ لعبة شطرنج 🔥",reply_markup=kb)
+    bot.send_game(msg.chat.id, GAME_SHORT_NAME)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def game_callback(call):
+    bot.answer_callback_query(call.id, url=WEB_LINK)
 
 def run_bot():
     try: bot.remove_webhook()
