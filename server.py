@@ -1,12 +1,12 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, Response
 from flask_socketio import SocketIO, join_room, emit
-import os, time, threading
+import os, time, threading, urllib.parse, urllib.request
 import chess
 import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = "8526200321:AAGK439-ind7RpCtyYRCZQQpHcU4XZ1qCKU"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
-GAME_SHORT_NAME = "fadichess"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "chess_secret"
@@ -42,7 +42,7 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow:hidden}
 .board{width:100vw;height:100vw;position:relative;touch-action:none}
 .square{position:absolute;width:12.5%;height:12.5%}
 .light{background:#f0d9b5}.dark{background:#b88762}
-.piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .05s linear;z-index:5}
+.piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .06s linear;z-index:5}
 .piece img{width:88%;height:88%;pointer-events:none}
 .sel{box-shadow:inset 0 0 0 5px #d8c52c}
 .move::after{content:"";width:25px;height:25px;background:rgba(80,80,80,.35);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
@@ -98,20 +98,9 @@ let MINUTES={{ minutes }};
 
 let boardData=null, turn="w", over=false, selected=null, legal=[], dragging=null;
 let lastMove=[], checkSquare=null;
-let lastFen="";
 
 const boardEl=document.getElementById("board");
 const pieceBase="https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piece/cburnett/";
-
-const moveSound = new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3");
-moveSound.preload = "auto";
-
-function playMoveSound(){
-  try{
-    moveSound.currentTime = 0;
-    moveSound.play().catch(()=>{});
-  }catch(e){}
-}
 
 function showOnly(id){
   ["home","modes","wait","game"].forEach(x=>document.getElementById(x).style.display="none");
@@ -136,17 +125,8 @@ function shareGame(){
   window.open(`https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`,"_blank");
 }
 
-function fmt(s){
-  s=Math.max(0,Math.floor(s));
-  let m=Math.floor(s/60),r=s%60;
-  return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0")
-}
-
-function visualToSq(r,c){
-  const f=["a","b","c","d","e","f","g","h"];
-  return ROLE==="w"?f[c]+(8-r):f[7-c]+(r+1)
-}
-
+function fmt(s){s=Math.max(0,Math.floor(s));let m=Math.floor(s/60),r=s%60;return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0")}
+function visualToSq(r,c){const f=["a","b","c","d","e","f","g","h"];return ROLE==="w"?f[c]+(8-r):f[7-c]+(r+1)}
 function pos(r,c){return `translate(${c*100}%,${r*100}%)`}
 function getPiece(r,c){return ROLE==="w"?boardData[r][c]:boardData[7-r][7-c]}
 
@@ -222,7 +202,7 @@ function endDrag(e){
   let c=Math.floor((e.clientX-rect.left)/size), r=Math.floor((e.clientY-rect.top)/size);
   c=Math.max(0,Math.min(7,c)); r=Math.max(0,Math.min(7,r));
   socket.emit("move",{game:GAME_ID,from:dragging.sq,to:visualToSq(r,c),role:ROLE});
-  dragging.el.style.transition="transform .05s linear";
+  dragging.el.style.transition="transform .06s linear";
   dragging=null;selected=null;legal=[];
 }
 
@@ -233,9 +213,6 @@ socket.on("connect",()=>{
 });
 
 socket.on("state",(d)=>{
-  const oldFen = lastFen;
-  lastFen = d.fen || "";
-
   boardData=d.board; turn=d.turn; over=d.over;
   lastMove=d.last_move||[]; checkSquare=d.check_square||null;
 
@@ -251,14 +228,9 @@ socket.on("state",(d)=>{
   topTimer.innerText="◷ "+fmt(d.top_time);
   bottomTimer.innerText="◷ "+fmt(d.bottom_time);
   msg.innerText=d.message;
-
-  if(oldFen && oldFen !== lastFen){
-    playMoveSound();
-  }
-
   render();
 
-  if(checkSquare)setTimeout(()=>{checkSquare=null;render()},420);
+  if(checkSquare)setTimeout(()=>{checkSquare=null;render()},450);
 });
 
 socket.on("legal_moves",(d)=>{selected=d.square;legal=d.moves;render()});
@@ -294,13 +266,10 @@ def update_clock(g):
     if g["status"]!="playing":
         g["last"]=time.time()
         return
-    now=time.time()
-    diff=now-g["last"]
+    now=time.time(); diff=now-g["last"]
     if not g["board"].is_game_over():
-        if g["board"].turn==chess.WHITE:
-            g["white_time"]-=diff
-        else:
-            g["black_time"]-=diff
+        if g["board"].turn==chess.WHITE:g["white_time"]-=diff
+        else:g["black_time"]-=diff
     g["last"]=now
 
 def board_json(board):
@@ -308,39 +277,28 @@ def board_json(board):
     for r in range(8):
         row=[]
         for c in range(8):
-            sq=chess.square(c,7-r)
-            p=board.piece_at(sq)
+            sq=chess.square(c,7-r); p=board.piece_at(sq)
             row.append({"type":p.symbol().lower(),"color":"w" if p.color==chess.WHITE else "b"} if p else None)
         out.append(row)
     return out
 
 def check_square(board):
-    if not board.is_check():
-        return None
+    if not board.is_check():return None
     k=board.king(board.turn)
     return chess.square_name(k) if k is not None else None
 
 def emit_state(game_id):
-    g=get_game(game_id)
-    update_clock(g)
-    b=g["board"]
+    g=get_game(game_id); update_clock(g); b=g["board"]
 
     over=False
-    if g["status"]=="waiting":
-        msg="Waiting for opponent"
-    elif g["white_time"]<=0:
-        msg="انتهى وقت الأبيض"; over=True
-    elif g["black_time"]<=0:
-        msg="انتهى وقت الأسود"; over=True
-    elif b.is_checkmate():
-        msg="كش مات"; over=True
-    elif b.is_stalemate():
-        msg="تعادل"; over=True
-    else:
-        msg="دور الأبيض" if b.turn==chess.WHITE else "دور الأسود"
+    if g["status"]=="waiting": msg="Waiting for opponent"
+    elif g["white_time"]<=0: msg="انتهى وقت الأبيض"; over=True
+    elif g["black_time"]<=0: msg="انتهى وقت الأسود"; over=True
+    elif b.is_checkmate(): msg="كش مات"; over=True
+    elif b.is_stalemate(): msg="تعادل"; over=True
+    else: msg="دور الأبيض" if b.turn==chess.WHITE else "دور الأسود"
 
     socketio.emit("state",{
-        "fen":b.fen(),
         "board":board_json(b),
         "turn":"w" if b.turn==chess.WHITE else "b",
         "over":over,
@@ -361,8 +319,7 @@ def home():
     game_id=request.args.get("game","new")
     role=request.args.get("role","w")
     minutes=int(request.args.get("time","10"))
-    if game_id!="new":
-        get_game(game_id,minutes)
+    if game_id!="new": get_game(game_id,minutes)
     return render_template_string(HTML,game_id=game_id,role=role,minutes=minutes)
 
 @socketio.on("create_game")
@@ -389,19 +346,13 @@ def get_state(data):
 
 @socketio.on("legal")
 def legal(data):
-    g=get_game(data["game"])
-    b=g["board"]
-    sq_name=data.get("square","")
-    role=data.get("role","w")
-    if g["status"]!="playing":
-        return emit("legal_moves",{"square":sq_name,"moves":[]})
-    try:
-        sq=chess.parse_square(sq_name)
-    except:
-        return emit("legal_moves",{"square":sq_name,"moves":[]})
+    g=get_game(data["game"]); b=g["board"]
+    sq_name=data.get("square",""); role=data.get("role","w")
+    if g["status"]!="playing": return emit("legal_moves",{"square":sq_name,"moves":[]})
+    try: sq=chess.parse_square(sq_name)
+    except: return emit("legal_moves",{"square":sq_name,"moves":[]})
     p=b.piece_at(sq)
-    if not p:
-        return emit("legal_moves",{"square":sq_name,"moves":[]})
+    if not p: return emit("legal_moves",{"square":sq_name,"moves":[]})
     if (role=="w" and (b.turn!=chess.WHITE or p.color!=chess.WHITE)) or (role=="b" and (b.turn!=chess.BLACK or p.color!=chess.BLACK)):
         return emit("legal_moves",{"square":sq_name,"moves":[]})
     moves=[chess.square_name(m.to_square) for m in b.legal_moves if m.from_square==sq]
@@ -409,39 +360,29 @@ def legal(data):
 
 @socketio.on("move")
 def move(data):
-    g=get_game(data["game"])
-    update_clock(g)
-    b=g["board"]
+    g=get_game(data["game"]); update_clock(g); b=g["board"]
     role=data.get("role","w")
-    if g["status"]!="playing":
-        return
-    if (role=="w" and b.turn!=chess.WHITE) or (role=="b" and b.turn!=chess.BLACK):
-        return
+    if g["status"]!="playing": return
+    if (role=="w" and b.turn!=chess.WHITE) or (role=="b" and b.turn!=chess.BLACK): return
     try:
         mv=chess.Move.from_uci(data["from"]+data["to"])
-        if mv not in b.legal_moves:
-            mv=chess.Move.from_uci(data["from"]+data["to"]+"q")
+        if mv not in b.legal_moves: mv=chess.Move.from_uci(data["from"]+data["to"]+"q")
         if mv in b.legal_moves:
             b.push(mv)
             g["last_move"]=[data["from"],data["to"]]
             g["last"]=time.time()
             emit_state(data["game"])
-    except:
-        pass
+    except: pass
 
 @bot.message_handler(commands=["start"])
 def start(msg):
-    bot.send_game(msg.chat.id, GAME_SHORT_NAME)
-
-@bot.callback_query_handler(func=lambda call: True)
-def game_callback(call):
-    bot.answer_callback_query(call.id, url=WEB_LINK)
+    kb=InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("🎮 العب الشطرنج",url=WEB_LINK))
+    bot.send_message(msg.chat.id,"اضغط وابدأ لعبة شطرنج 🔥",reply_markup=kb)
 
 def run_bot():
-    try:
-        bot.remove_webhook()
-    except:
-        pass
+    try: bot.remove_webhook()
+    except: pass
     bot.infinity_polling(skip_pending=True)
 
 threading.Thread(target=run_bot,daemon=True).start()
