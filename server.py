@@ -22,36 +22,43 @@ HTML = """
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fadi Chess</title>
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden}
+
 .screen{height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column}
 
 .home{background:#111827;color:white;text-align:left;padding:36px;width:100%;height:100vh}
-.home h1{font-size:44px;margin:45px 0 5px}
+.home h1{font-size:42px;margin:45px 0 5px}
 .home p{font-size:22px;color:#cbd5e1;margin:0 0 25px}
-.play{background:#3478d4;color:white;border:2px solid #79b7ff;border-radius:18px;font-size:34px;font-weight:900;padding:13px 42px}
+.play{
+  background:#3478d4;color:white;border:2px solid #79b7ff;
+  border-radius:18px;font-size:28px;font-weight:900;
+  padding:12px 42px
+}
 
-.modes button,.share{background:#3478d4;color:white;border:0;border-radius:14px;font-size:22px;font-weight:800;padding:15px;margin:9px;width:85%}
+.modes button,.share{
+  background:#3478d4;color:white;border:0;border-radius:14px;
+  font-size:21px;font-weight:800;padding:14px;margin:9px;width:82%
+}
 .wait{color:#9ca3af;font-size:22px;background:#dcecf8}
 .loader{margin-top:18px;width:30px;height:30px;border:4px solid #c6cfd6;border-top-color:#666;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 #game{display:none;height:100vh;background:#111827}
-.top{height:72px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid #263246;background:#111827}
-.x{font-size:42px;margin-right:28px}
-.title{font-size:29px;font-weight:900}
-.icons{margin-left:auto;font-size:30px;display:flex;gap:18px;align-items:center}
-.musicBtn{width:50px;height:50px;border-radius:50%;border:2px solid #60a5fa;background:#2563eb;color:white;font-size:28px;font-weight:900}
+.top{height:66px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #263246;background:#111827}
+.x{font-size:38px;margin-right:24px}
+.title{font-size:27px;font-weight:900}
+.icons{margin-left:auto;font-size:28px;display:flex;gap:14px;align-items:center}
+.musicBtn{width:46px;height:46px;border-radius:50%;border:2px solid #60a5fa;background:#2563eb;color:white;font-size:25px;font-weight:900}
 
-.player{display:flex;align-items:center;padding:12px 16px;min-height:86px;background:#111827}
-.avatar{width:70px;height:70px;border-radius:50%;object-fit:cover;background:#334155}
-.info{margin-left:12px;font-size:22px;font-weight:900;color:#fff}
-.rate{font-size:17px;font-weight:400;margin-top:4px;color:#cbd5e1}
-.timer{margin-left:auto;background:#dbeafe;color:#020617;border-radius:13px;padding:13px 20px;font-size:28px;font-weight:900}
+.player{display:flex;align-items:center;padding:10px 14px;min-height:78px;background:#111827}
+.avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#334155}
+.info{margin-left:12px;font-size:21px;font-weight:900;color:#fff}
+.rate{font-size:16px;font-weight:400;margin-top:4px;color:#cbd5e1}
+.timer{margin-left:auto;background:#dbeafe;color:#020617;border-radius:13px;padding:11px 18px;font-size:26px;font-weight:900}
 
 .board{width:100vw;height:100vw;position:relative;touch-action:none}
 .square{position:absolute;width:12.5%;height:12.5%}
@@ -60,16 +67,16 @@ body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden
 .piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .055s linear;z-index:5}
 .piece img{width:88%;height:88%;pointer-events:none}
 .sel{box-shadow:inset 0 0 0 5px #facc15}
-.move::after{content:"";width:25px;height:25px;background:rgba(30,41,59,.35);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.move::after{content:"";width:24px;height:24px;background:rgba(30,41,59,.35);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 .last{background:#eab308!important}
 .check{background:#ef4444!important}
-.msg{text-align:center;font-size:22px;margin:8px;color:#e5e7eb}
+.msg{text-align:center;font-size:20px;margin:6px;color:#e5e7eb}
 
-.bottomBar{height:78px;display:flex;justify-content:space-around;align-items:center;border-top:1px solid #263246;background:#111827;color:#9ca3af}
-.bottomBar div{text-align:center;font-size:14px}
-.bottomBar span{font-size:26px;display:block;margin-bottom:4px}
+.bottomBar{height:70px;display:flex;justify-content:space-around;align-items:center;border-top:1px solid #263246;background:#111827;color:#9ca3af}
+.bottomBar div{text-align:center;font-size:13px}
+.bottomBar span{font-size:24px;display:block;margin-bottom:3px}
 
-.musicPanel{position:absolute;right:10px;top:85px;width:340px;max-width:94vw;background:#111827;border:1px solid #475569;border-radius:14px;padding:14px;z-index:20;display:none;box-shadow:0 15px 45px #0008}
+.musicPanel{position:absolute;right:10px;top:78px;width:340px;max-width:94vw;background:#111827;border:1px solid #475569;border-radius:14px;padding:14px;z-index:20;display:none;box-shadow:0 15px 45px #0008}
 .musicHead{display:flex;align-items:center;font-size:22px;font-weight:900;margin-bottom:12px}
 .closeM{margin-left:auto;font-size:28px;cursor:pointer}
 .search{width:100%;background:#0f172a;border:1px solid #475569;border-radius:12px;padding:13px;color:white;font-size:17px;margin-bottom:12px}
@@ -84,9 +91,6 @@ body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden
 
 @media(max-width:650px){
   .musicPanel{left:10px;right:10px;width:auto}
-  .top{height:64px}
-  .title{font-size:26px}
-  .musicBtn{width:46px;height:46px}
 }
 </style>
 </head>
@@ -97,7 +101,7 @@ body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden
   <h1>Fadi Chess</h1>
   <p>Play chess with friends</p>
   <button class="play" onclick="showModes()">▶ PLAY</button>
-  <div style="margin-top:35px;color:#facc15;font-size:22px;font-weight:bold">♟ Challenge • Think • Win</div>
+  <div style="margin-top:30px;color:#facc15;font-size:21px;font-weight:bold">♟ Challenge • Think • Win</div>
 </div>
 
 <div id="modes" class="screen modes" style="display:none;background:#dcecf8;color:#000">
@@ -187,6 +191,7 @@ function playChessSound(t){
 
 let musicAudio=new Audio();
 let currentSong=null;
+
 const songs=[
  {title:"Calm Piano",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
  {title:"Deep Focus",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
@@ -271,14 +276,10 @@ function shareGame(){
   const joinLink=`${location.origin}/?game=${GAME_ID}&role=b&time=${MINUTES}`;
   const text="تعال العب شطرنج وياي ♟";
 
-  const tgApp=`tg://msg_url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
-  const tgWeb=`https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
-
-  window.location.href=tgApp;
-
-  setTimeout(()=>{
-    window.location.href=tgWeb;
-  },700);
+  window.open(
+    `https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`,
+    "_blank"
+  );
 }
 
 function fmt(s){
@@ -314,6 +315,7 @@ function drawPieces(){
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
     let p=getPiece(r,c);
     if(!p)continue;
+
     let sq=visualToSq(r,c), el=document.createElement("div");
     el.className="piece";
     el.style.transform=pos(r,c);
