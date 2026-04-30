@@ -228,7 +228,7 @@ function createGame(m){
 function shareGame(){
   const joinLink=`${location.origin}/?game=${GAME_ID}&role=b&time=${MINUTES}`;
   const text="تعال العب شطرنج وياي ♟";
-  window.open(`https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`,"_blank");
+  window.location.href = `https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
 }
 
 function fmt(s){s=Math.max(0,Math.floor(s));let m=Math.floor(s/60),r=s%60;return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0")}
