@@ -4,7 +4,7 @@ import os, time, threading
 import chess
 import telebot
 
-TOKEN = "8526200321:AAH-mVvXHb0B67x0PkA9pv1uVwYhBD7-_EE"
+TOKEN = "8526200321:AAFPUduxPtVVpNJ2RLjV3iiK0zdxduEz4PM"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 GAME_SHORT_NAME = "fadichess"
 
@@ -29,10 +29,12 @@ HTML = """
 *{box-sizing:border-box}
 body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden}
 .screen{height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column}
+
 .home{background:#111827;color:white;text-align:left;padding:36px;width:100%;height:100vh}
 .home h1{font-size:44px;margin:45px 0 5px}
 .home p{font-size:22px;color:#cbd5e1;margin:0 0 25px}
 .play{background:#3478d4;color:white;border:2px solid #79b7ff;border-radius:18px;font-size:34px;font-weight:900;padding:13px 42px}
+
 .modes button,.share{background:#3478d4;color:white;border:0;border-radius:14px;font-size:22px;font-weight:800;padding:15px;margin:9px;width:85%}
 .wait{color:#9ca3af;font-size:22px;background:#dcecf8}
 .loader{margin-top:18px;width:30px;height:30px;border:4px solid #c6cfd6;border-top-color:#666;border-radius:50%;animation:spin 1s linear infinite}
@@ -40,17 +42,21 @@ body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden
 
 #game{display:none;height:100vh;background:#111827}
 .top{height:72px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid #263246;background:#111827}
-.x{font-size:42px;margin-right:28px}.title{font-size:29px;font-weight:900}.icons{margin-left:auto;font-size:30px;display:flex;gap:18px;align-items:center}
+.x{font-size:42px;margin-right:28px}
+.title{font-size:29px;font-weight:900}
+.icons{margin-left:auto;font-size:30px;display:flex;gap:18px;align-items:center}
 .musicBtn{width:50px;height:50px;border-radius:50%;border:2px solid #60a5fa;background:#2563eb;color:white;font-size:28px;font-weight:900}
 
 .player{display:flex;align-items:center;padding:12px 16px;min-height:86px;background:#111827}
 .avatar{width:70px;height:70px;border-radius:50%;object-fit:cover;background:#334155}
-.info{margin-left:12px;font-size:22px;font-weight:900;color:#fff}.rate{font-size:17px;font-weight:400;margin-top:4px;color:#cbd5e1}
+.info{margin-left:12px;font-size:22px;font-weight:900;color:#fff}
+.rate{font-size:17px;font-weight:400;margin-top:4px;color:#cbd5e1}
 .timer{margin-left:auto;background:#dbeafe;color:#020617;border-radius:13px;padding:13px 20px;font-size:28px;font-weight:900}
 
 .board{width:100vw;height:100vw;position:relative;touch-action:none}
 .square{position:absolute;width:12.5%;height:12.5%}
-.light{background:#dbeafe}.dark{background:#7294bd}
+.light{background:#dbeafe}
+.dark{background:#7294bd}
 .piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .055s linear;z-index:5}
 .piece img{width:88%;height:88%;pointer-events:none}
 .sel{box-shadow:inset 0 0 0 5px #facc15}
@@ -75,7 +81,13 @@ body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden
 .playSmall{background:none;border:0;color:#e5e7eb;font-size:25px}
 .now{border-top:1px solid #475569;margin-top:12px;padding-top:12px;display:flex;align-items:center;gap:10px}
 .progress{width:100%;accent-color:#2563eb}
-@media(max-width:650px){.musicPanel{left:10px;right:10px;width:auto}.top{height:64px}.title{font-size:26px}.musicBtn{width:46px;height:46px}}
+
+@media(max-width:650px){
+  .musicPanel{left:10px;right:10px;width:auto}
+  .top{height:64px}
+  .title{font-size:26px}
+  .musicBtn{width:46px;height:46px}
+}
 </style>
 </head>
 
@@ -208,20 +220,30 @@ function playSong(s){
   currentSong=s;
   musicAudio.src=s.url;
   musicAudio.play().catch(()=>{});
-  nowCover.src=s.cover; nowTitle.innerText=s.title; nowArtist.innerText=s.artist;
+  nowCover.src=s.cover;
+  nowTitle.innerText=s.title;
+  nowArtist.innerText=s.artist;
   pauseBtn.innerText="⏸";
 }
 
 function toggleAudio(){
   if(!currentSong)return;
-  if(musicAudio.paused){musicAudio.play();pauseBtn.innerText="⏸"}else{musicAudio.pause();pauseBtn.innerText="▶"}
+  if(musicAudio.paused){
+    musicAudio.play();
+    pauseBtn.innerText="⏸";
+  }else{
+    musicAudio.pause();
+    pauseBtn.innerText="▶";
+  }
 }
 
 musicAudio.ontimeupdate=()=>{
   if(musicAudio.duration)progress.value=(musicAudio.currentTime/musicAudio.duration)*100;
 }
 
-progress.oninput=()=>{if(musicAudio.duration)musicAudio.currentTime=(progress.value/100)*musicAudio.duration}
+progress.oninput=()=>{
+  if(musicAudio.duration)musicAudio.currentTime=(progress.value/100)*musicAudio.duration;
+}
 
 function showOnly(id){
   ["home","modes","wait","game"].forEach(x=>document.getElementById(x).style.display="none");
@@ -232,26 +254,44 @@ function showOnly(id){
 function showModes(){showOnly("modes")}
 
 function createGame(m){
-  GAME_ID=Date.now().toString(); ROLE="w"; MINUTES=m;
+  GAME_ID=Date.now().toString();
+  ROLE="w";
+  MINUTES=m;
   history.replaceState(null,"",`/?game=${GAME_ID}&role=w&time=${m}`);
   socket.emit("create_game",{game:GAME_ID,time:m,role:"w"});
   showOnly("wait");
 }
 
 function shareGame(){
+  if(!GAME_ID || GAME_ID==="new"){
+    alert("اختار الوقت أولاً ⚠️");
+    return;
+  }
+
   const joinLink=`${location.origin}/?game=${GAME_ID}&role=b&time=${MINUTES}`;
   const text="تعال العب شطرنج وياي ♟";
-  const tgShare=`https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
 
-  if(window.Telegram && Telegram.WebApp){
-    Telegram.WebApp.openTelegramLink(tgShare);
-  }else{
-    window.location.href=tgShare;
-  }
+  const tgApp=`tg://msg_url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
+  const tgWeb=`https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
+
+  window.location.href=tgApp;
+
+  setTimeout(()=>{
+    window.location.href=tgWeb;
+  },700);
 }
 
-function fmt(s){s=Math.max(0,Math.floor(s));let m=Math.floor(s/60),r=s%60;return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0")}
-function visualToSq(r,c){const f=["a","b","c","d","e","f","g","h"];return ROLE==="w"?f[c]+(8-r):f[7-c]+(r+1)}
+function fmt(s){
+  s=Math.max(0,Math.floor(s));
+  let m=Math.floor(s/60),r=s%60;
+  return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0")
+}
+
+function visualToSq(r,c){
+  const f=["a","b","c","d","e","f","g","h"];
+  return ROLE==="w"?f[c]+(8-r):f[7-c]+(r+1)
+}
+
 function pos(r,c){return `translate(${c*100}%,${r*100}%)`}
 function getPiece(r,c){return ROLE==="w"?boardData[r][c]:boardData[7-r][7-c]}
 
@@ -272,14 +312,18 @@ function drawSquares(){
 
 function drawPieces(){
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-    let p=getPiece(r,c); if(!p)continue;
+    let p=getPiece(r,c);
+    if(!p)continue;
     let sq=visualToSq(r,c), el=document.createElement("div");
-    el.className="piece"; el.style.transform=pos(r,c);
+    el.className="piece";
+    el.style.transform=pos(r,c);
     el.onclick=(e)=>{e.stopPropagation();tapSquare(sq)};
     el.onpointerdown=(e)=>startDrag(e,el,sq);
+
     let img=document.createElement("img");
     img.src=pieceBase+(p.color==="w"?"w":"b")+p.type.toUpperCase()+".svg";
-    el.appendChild(img); boardEl.appendChild(el);
+    el.appendChild(img);
+    boardEl.appendChild(el);
   }
 }
 
@@ -288,17 +332,36 @@ function render(){drawSquares();if(boardData)drawPieces()}
 function tapSquare(sq){
   if(over)return;
   if((ROLE==="w"&&turn!=="w")||(ROLE==="b"&&turn!=="b"))return;
-  if(selected){socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});selected=null;legal=[];return}
+
+  if(selected){
+    socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});
+    selected=null;
+    legal=[];
+    return;
+  }
+
   socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
 }
 
 function startDrag(e,el,sq){
-  if(selected&&selected!==sq){socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});selected=null;legal=[];return}
+  if(selected&&selected!==sq){
+    socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});
+    selected=null;
+    legal=[];
+    return;
+  }
+
   if(over)return;
   if((ROLE==="w"&&turn!=="w")||(ROLE==="b"&&turn!=="b"))return;
-  selected=sq;socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
-  dragging={el,sq};el.style.transition="none";el.setPointerCapture(e.pointerId);
-  moveDrag(e);el.onpointermove=moveDrag;el.onpointerup=endDrag;
+
+  selected=sq;
+  socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
+  dragging={el,sq};
+  el.style.transition="none";
+  el.setPointerCapture(e.pointerId);
+  moveDrag(e);
+  el.onpointermove=moveDrag;
+  el.onpointerup=endDrag;
 }
 
 function moveDrag(e){
@@ -311,28 +374,65 @@ function endDrag(e){
   if(!dragging)return;
   const rect=boardEl.getBoundingClientRect(), size=rect.width/8;
   let c=Math.floor((e.clientX-rect.left)/size), r=Math.floor((e.clientY-rect.top)/size);
-  c=Math.max(0,Math.min(7,c)); r=Math.max(0,Math.min(7,r));
+  c=Math.max(0,Math.min(7,c));
+  r=Math.max(0,Math.min(7,r));
+
   socket.emit("move",{game:GAME_ID,from:dragging.sq,to:visualToSq(r,c),role:ROLE});
-  dragging.el.style.transition="transform .055s linear";dragging=null;selected=null;legal=[];
+  dragging.el.style.transition="transform .055s linear";
+  dragging=null;
+  selected=null;
+  legal=[];
 }
 
-socket.on("connect",()=>{if(GAME_ID&&GAME_ID!=="new")socket.emit("join_game",{game:GAME_ID,role:ROLE,time:MINUTES})});
+socket.on("connect",()=>{
+  if(GAME_ID&&GAME_ID!=="new"){
+    socket.emit("join_game",{game:GAME_ID,role:ROLE,time:MINUTES});
+  }
+});
 
 socket.on("state",(d)=>{
-  boardData=d.board;turn=d.turn;over=d.over;lastMove=d.last_move||[];checkSquare=d.check_square||null;
-  topAvatar.src=d.top_avatar;bottomAvatar.src=d.bottom_avatar;waitAvatar.src=d.bottom_avatar;
-  topName.innerHTML=d.top_name+'<div class="rate">1200</div>';bottomName.innerHTML=d.bottom_name+'<div class="rate">1200</div>';
-  if(d.sound_id&&d.sound_id!==lastSoundId){lastSoundId=d.sound_id;playChessSound(d.sound_type)}
-  if(d.status==="waiting"){showOnly("wait");return}
+  boardData=d.board;
+  turn=d.turn;
+  over=d.over;
+  lastMove=d.last_move||[];
+  checkSquare=d.check_square||null;
+
+  topAvatar.src=d.top_avatar;
+  bottomAvatar.src=d.bottom_avatar;
+  waitAvatar.src=d.bottom_avatar;
+
+  topName.innerHTML=d.top_name+'<div class="rate">1200</div>';
+  bottomName.innerHTML=d.bottom_name+'<div class="rate">1200</div>';
+
+  if(d.sound_id&&d.sound_id!==lastSoundId){
+    lastSoundId=d.sound_id;
+    playChessSound(d.sound_type);
+  }
+
+  if(d.status==="waiting"){
+    showOnly("wait");
+    return;
+  }
+
   showOnly("game");
-  topTimer.innerText="◷ "+fmt(d.top_time);bottomTimer.innerText="◷ "+fmt(d.bottom_time);
-  msg.innerText=d.message;render();
+
+  topTimer.innerText="◷ "+fmt(d.top_time);
+  bottomTimer.innerText="◷ "+fmt(d.bottom_time);
+  msg.innerText=d.message;
+
+  render();
+
   if(checkSquare)setTimeout(()=>{checkSquare=null;render()},450);
 });
 
-socket.on("legal_moves",(d)=>{selected=d.square;legal=d.moves;render()});
+socket.on("legal_moves",(d)=>{
+  selected=d.square;
+  legal=d.moves;
+  render();
+});
 
-if(GAME_ID==="new")showOnly("home");else showOnly("wait");
+if(GAME_ID==="new")showOnly("home");
+else showOnly("wait");
 </script>
 </body>
 </html>
@@ -344,21 +444,36 @@ def default_avatar():
 def get_game(game_id, minutes=10):
     if game_id not in games:
         games[game_id]={
-            "board":chess.Board(),"white_time":minutes*60,"black_time":minutes*60,
-            "last":time.time(),"minutes":minutes,"status":"waiting",
-            "white_name":"You","black_name":"Opponent",
-            "white_avatar":default_avatar(),"black_avatar":default_avatar(),
-            "last_move":[],"sound_id":0,"sound_type":"move"
+            "board":chess.Board(),
+            "white_time":minutes*60,
+            "black_time":minutes*60,
+            "last":time.time(),
+            "minutes":minutes,
+            "status":"waiting",
+            "white_name":"You",
+            "black_name":"Opponent",
+            "white_avatar":default_avatar(),
+            "black_avatar":default_avatar(),
+            "last_move":[],
+            "sound_id":0,
+            "sound_type":"move"
         }
     return games[game_id]
 
 def update_clock(g):
     if g["status"]!="playing":
-        g["last"]=time.time(); return
-    now=time.time(); diff=now-g["last"]
+        g["last"]=time.time()
+        return
+
+    now=time.time()
+    diff=now-g["last"]
+
     if not g["board"].is_game_over():
-        if g["board"].turn==chess.WHITE:g["white_time"]-=diff
-        else:g["black_time"]-=diff
+        if g["board"].turn==chess.WHITE:
+            g["white_time"]-=diff
+        else:
+            g["black_time"]-=diff
+
     g["last"]=now
 
 def board_json(board):
@@ -366,33 +481,58 @@ def board_json(board):
     for r in range(8):
         row=[]
         for c in range(8):
-            sq=chess.square(c,7-r); p=board.piece_at(sq)
+            sq=chess.square(c,7-r)
+            p=board.piece_at(sq)
             row.append({"type":p.symbol().lower(),"color":"w" if p.color==chess.WHITE else "b"} if p else None)
         out.append(row)
     return out
 
 def check_square(board):
-    if not board.is_check():return None
+    if not board.is_check():
+        return None
     k=board.king(board.turn)
     return chess.square_name(k) if k is not None else None
 
 def emit_state(game_id):
-    g=get_game(game_id); update_clock(g); b=g["board"]
+    g=get_game(game_id)
+    update_clock(g)
+    b=g["board"]
+
     over=False
-    if g["status"]=="waiting": msg="Waiting for opponent"
-    elif g["white_time"]<=0: msg="انتهى وقت الأبيض"; over=True
-    elif g["black_time"]<=0: msg="انتهى وقت الأسود"; over=True
-    elif b.is_checkmate(): msg="كش مات"; over=True
-    elif b.is_stalemate(): msg="تعادل"; over=True
-    else: msg="دور الأبيض" if b.turn==chess.WHITE else "دور الأسود"
+
+    if g["status"]=="waiting":
+        msg="Waiting for opponent"
+    elif g["white_time"]<=0:
+        msg="انتهى وقت الأبيض"
+        over=True
+    elif g["black_time"]<=0:
+        msg="انتهى وقت الأسود"
+        over=True
+    elif b.is_checkmate():
+        msg="كش مات"
+        over=True
+    elif b.is_stalemate():
+        msg="تعادل"
+        over=True
+    else:
+        msg="دور الأبيض" if b.turn==chess.WHITE else "دور الأسود"
+
     socketio.emit("state",{
-        "board":board_json(b),"turn":"w" if b.turn==chess.WHITE else "b",
-        "over":over,"status":g["status"],"message":msg,
-        "last_move":g["last_move"],"check_square":check_square(b),
-        "top_name":g["black_name"],"bottom_name":g["white_name"],
-        "top_avatar":g["black_avatar"],"bottom_avatar":g["white_avatar"],
-        "top_time":int(g["black_time"]),"bottom_time":int(g["white_time"]),
-        "sound_id":g["sound_id"],"sound_type":g["sound_type"]
+        "board":board_json(b),
+        "turn":"w" if b.turn==chess.WHITE else "b",
+        "over":over,
+        "status":g["status"],
+        "message":msg,
+        "last_move":g["last_move"],
+        "check_square":check_square(b),
+        "top_name":g["black_name"],
+        "bottom_name":g["white_name"],
+        "top_avatar":g["black_avatar"],
+        "bottom_avatar":g["white_avatar"],
+        "top_time":int(g["black_time"]),
+        "bottom_time":int(g["white_time"]),
+        "sound_id":g["sound_id"],
+        "sound_type":g["sound_type"]
     }, room=game_id)
 
 @app.route("/")
@@ -400,7 +540,10 @@ def home():
     game_id=request.args.get("game","new")
     role=request.args.get("role","w")
     minutes=int(request.args.get("time","10"))
-    if game_id!="new": get_game(game_id,minutes)
+
+    if game_id!="new":
+        get_game(game_id,minutes)
+
     return render_template_string(HTML,game_id=game_id,role=role,minutes=minutes)
 
 @socketio.on("create_game")
@@ -411,39 +554,81 @@ def create_game(data):
 
 @socketio.on("join_game")
 def join_game(data):
-    game=data.get("game"); role=data.get("role","w"); minutes=int(data.get("time",10))
-    g=get_game(game,minutes); join_room(game)
+    game=data.get("game")
+    role=data.get("role","w")
+    minutes=int(data.get("time",10))
+    g=get_game(game,minutes)
+    join_room(game)
+
     if role=="b":
-        g["status"]="playing"; g["last"]=time.time()
+        g["status"]="playing"
+        g["last"]=time.time()
+
     emit_state(game)
 
 @socketio.on("legal")
 def legal(data):
-    g=get_game(data["game"]); b=g["board"]; sq_name=data.get("square",""); role=data.get("role","w")
-    if g["status"]!="playing": return emit("legal_moves",{"square":sq_name,"moves":[]})
-    try: sq=chess.parse_square(sq_name)
-    except: return emit("legal_moves",{"square":sq_name,"moves":[]})
+    g=get_game(data["game"])
+    b=g["board"]
+    sq_name=data.get("square","")
+    role=data.get("role","w")
+
+    if g["status"]!="playing":
+        return emit("legal_moves",{"square":sq_name,"moves":[]})
+
+    try:
+        sq=chess.parse_square(sq_name)
+    except:
+        return emit("legal_moves",{"square":sq_name,"moves":[]})
+
     p=b.piece_at(sq)
-    if not p: return emit("legal_moves",{"square":sq_name,"moves":[]})
+
+    if not p:
+        return emit("legal_moves",{"square":sq_name,"moves":[]})
+
     if (role=="w" and (b.turn!=chess.WHITE or p.color!=chess.WHITE)) or (role=="b" and (b.turn!=chess.BLACK or p.color!=chess.BLACK)):
         return emit("legal_moves",{"square":sq_name,"moves":[]})
+
     moves=[chess.square_name(m.to_square) for m in b.legal_moves if m.from_square==sq]
     emit("legal_moves",{"square":sq_name,"moves":moves})
 
 @socketio.on("move")
 def move(data):
-    g=get_game(data["game"]); update_clock(g); b=g["board"]; role=data.get("role","w")
-    if g["status"]!="playing": return
-    if (role=="w" and b.turn!=chess.WHITE) or (role=="b" and b.turn!=chess.BLACK): return
+    g=get_game(data["game"])
+    update_clock(g)
+    b=g["board"]
+    role=data.get("role","w")
+
+    if g["status"]!="playing":
+        return
+
+    if (role=="w" and b.turn!=chess.WHITE) or (role=="b" and b.turn!=chess.BLACK):
+        return
+
     try:
         mv=chess.Move.from_uci(data["from"]+data["to"])
-        if mv not in b.legal_moves: mv=chess.Move.from_uci(data["from"]+data["to"]+"q")
+
+        if mv not in b.legal_moves:
+            mv=chess.Move.from_uci(data["from"]+data["to"]+"q")
+
         if mv in b.legal_moves:
-            is_capture=b.is_capture(mv); b.push(mv)
-            g["last_move"]=[data["from"],data["to"]]; g["last"]=time.time(); g["sound_id"]+=1
-            g["sound_type"]="check" if b.is_check() else "capture" if is_capture else "move"
+            is_capture=b.is_capture(mv)
+            b.push(mv)
+
+            g["last_move"]=[data["from"],data["to"]]
+            g["last"]=time.time()
+            g["sound_id"]+=1
+
+            if b.is_check():
+                g["sound_type"]="check"
+            elif is_capture:
+                g["sound_type"]="capture"
+            else:
+                g["sound_type"]="move"
+
             emit_state(data["game"])
-    except: pass
+    except:
+        pass
 
 @bot.message_handler(commands=["start"])
 def start(msg):
@@ -454,8 +639,10 @@ def game_callback(call):
     bot.answer_callback_query(call.id, url=WEB_LINK)
 
 def run_bot():
-    try: bot.remove_webhook()
-    except: pass
+    try:
+        bot.remove_webhook()
+    except:
+        pass
     bot.infinity_polling(skip_pending=True)
 
 threading.Thread(target=run_bot,daemon=True).start()
