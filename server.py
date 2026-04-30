@@ -4,7 +4,7 @@ import os, time, threading
 import chess
 import telebot
 
-TOKEN = "8526200321:AAGYxPIb-qrTqdPiI5QYpq5aJc7FZqURP2Q"
+TOKEN = "8526200321:AAH-mVvXHb0B67x0PkA9pv1uVwYhBD7-_EE"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 GAME_SHORT_NAME = "fadichess"
 
@@ -21,7 +21,10 @@ HTML = """
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fadi Chess</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden}
@@ -75,6 +78,7 @@ body{margin:0;background:#0b1220;color:#eaf2ff;font-family:Arial;overflow:hidden
 @media(max-width:650px){.musicPanel{left:10px;right:10px;width:auto}.top{height:64px}.title{font-size:26px}.musicBtn{width:46px;height:46px}}
 </style>
 </head>
+
 <body>
 
 <div id="home" class="home">
@@ -183,9 +187,10 @@ function toggleMusic(){
   p.style.display=p.style.display==="block"?"none":"block";
   renderSongs(songs);
 }
+
 function renderSongs(list){
   const box=document.getElementById("songList"); box.innerHTML="";
-  list.forEach((s,i)=>{
+  list.forEach((s)=>{
     const d=document.createElement("div");
     d.className="song";
     d.innerHTML=`<img class="cover" src="${s.cover}"><div class="songInfo"><b>${s.title}</b><span>${s.artist}</span></div><button class="playSmall">▶</button>`;
@@ -193,10 +198,12 @@ function renderSongs(list){
     box.appendChild(d);
   });
 }
+
 function filterSongs(){
   const q=document.getElementById("musicSearch").value.toLowerCase();
   renderSongs(songs.filter(s=>s.title.toLowerCase().includes(q)||s.artist.toLowerCase().includes(q)));
 }
+
 function playSong(s){
   currentSong=s;
   musicAudio.src=s.url;
@@ -204,13 +211,16 @@ function playSong(s){
   nowCover.src=s.cover; nowTitle.innerText=s.title; nowArtist.innerText=s.artist;
   pauseBtn.innerText="⏸";
 }
+
 function toggleAudio(){
   if(!currentSong)return;
   if(musicAudio.paused){musicAudio.play();pauseBtn.innerText="⏸"}else{musicAudio.pause();pauseBtn.innerText="▶"}
 }
+
 musicAudio.ontimeupdate=()=>{
   if(musicAudio.duration)progress.value=(musicAudio.currentTime/musicAudio.duration)*100;
 }
+
 progress.oninput=()=>{if(musicAudio.duration)musicAudio.currentTime=(progress.value/100)*musicAudio.duration}
 
 function showOnly(id){
@@ -218,17 +228,26 @@ function showOnly(id){
   document.getElementById(id).style.display=id==="game"?"block":"flex";
   if(id==="home")document.getElementById(id).style.display="block";
 }
+
 function showModes(){showOnly("modes")}
+
 function createGame(m){
   GAME_ID=Date.now().toString(); ROLE="w"; MINUTES=m;
   history.replaceState(null,"",`/?game=${GAME_ID}&role=w&time=${m}`);
   socket.emit("create_game",{game:GAME_ID,time:m,role:"w"});
   showOnly("wait");
 }
+
 function shareGame(){
   const joinLink=`${location.origin}/?game=${GAME_ID}&role=b&time=${MINUTES}`;
   const text="تعال العب شطرنج وياي ♟";
-  window.location.href = `https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
+  const tgShare=`https://t.me/share/url?url=${encodeURIComponent(joinLink)}&text=${encodeURIComponent(text)}`;
+
+  if(window.Telegram && Telegram.WebApp){
+    Telegram.WebApp.openTelegramLink(tgShare);
+  }else{
+    window.location.href=tgShare;
+  }
 }
 
 function fmt(s){s=Math.max(0,Math.floor(s));let m=Math.floor(s/60),r=s%60;return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0")}
@@ -250,6 +269,7 @@ function drawSquares(){
     boardEl.appendChild(d);
   }
 }
+
 function drawPieces(){
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
     let p=getPiece(r,c); if(!p)continue;
@@ -262,6 +282,7 @@ function drawPieces(){
     el.appendChild(img); boardEl.appendChild(el);
   }
 }
+
 function render(){drawSquares();if(boardData)drawPieces()}
 
 function tapSquare(sq){
@@ -270,6 +291,7 @@ function tapSquare(sq){
   if(selected){socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});selected=null;legal=[];return}
   socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
 }
+
 function startDrag(e,el,sq){
   if(selected&&selected!==sq){socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});selected=null;legal=[];return}
   if(over)return;
@@ -278,11 +300,13 @@ function startDrag(e,el,sq){
   dragging={el,sq};el.style.transition="none";el.setPointerCapture(e.pointerId);
   moveDrag(e);el.onpointermove=moveDrag;el.onpointerup=endDrag;
 }
+
 function moveDrag(e){
   if(!dragging)return;
   const rect=boardEl.getBoundingClientRect(), size=rect.width/8;
   dragging.el.style.transform=`translate(${e.clientX-rect.left-size/2}px,${e.clientY-rect.top-size/2}px)`;
 }
+
 function endDrag(e){
   if(!dragging)return;
   const rect=boardEl.getBoundingClientRect(), size=rect.width/8;
@@ -293,6 +317,7 @@ function endDrag(e){
 }
 
 socket.on("connect",()=>{if(GAME_ID&&GAME_ID!=="new")socket.emit("join_game",{game:GAME_ID,role:ROLE,time:MINUTES})});
+
 socket.on("state",(d)=>{
   boardData=d.board;turn=d.turn;over=d.over;lastMove=d.last_move||[];checkSquare=d.check_square||null;
   topAvatar.src=d.top_avatar;bottomAvatar.src=d.bottom_avatar;waitAvatar.src=d.bottom_avatar;
@@ -304,7 +329,9 @@ socket.on("state",(d)=>{
   msg.innerText=d.message;render();
   if(checkSquare)setTimeout(()=>{checkSquare=null;render()},450);
 });
+
 socket.on("legal_moves",(d)=>{selected=d.square;legal=d.moves;render()});
+
 if(GAME_ID==="new")showOnly("home");else showOnly("wait");
 </script>
 </body>
