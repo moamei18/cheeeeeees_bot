@@ -1,11 +1,11 @@
-from flask import Flask, request, render_template_string, Response
+from flask import Flask, request, render_template_string, jsonify, Response
 from flask_socketio import SocketIO, join_room, emit
 import os, time, threading, urllib.parse, urllib.request
 import chess
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "8526200321:AAGw7sJ2QkP0hUwQAd_OZKDCOQjaKWBligw"
+TOKEN = "8526200321:AAEJcRb8Mor8YJKsLGfPs1DXmJDW8O0iT6M"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 app = Flask(__name__)
@@ -21,52 +21,40 @@ HTML = """
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fadi Chess</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
+*{box-sizing:border-box}
 body{margin:0;background:#0f172a;font-family:Arial;color:#eaf2ff;overflow:hidden}
 .screen{height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column}
-.home{background:#111827;color:white;text-align:left;padding:35px;width:100%;height:100vh;box-sizing:border-box}
-.home h1{font-size:42px;margin:45px 0 5px}
-.home p{font-size:22px;color:#cbd5e1;margin:0 0 25px}
-.play{background:#2f6fc7;color:white;border:2px solid #7db4ff;border-radius:16px;font-size:34px;font-weight:900;padding:12px 38px}
+.home{background:#111827;color:white;text-align:left;padding:35px;width:100%;height:100vh}
+.home h1{font-size:42px;margin:45px 0 5px}.home p{font-size:22px;color:#cbd5e1;margin:0 0 25px}
+.play{background:#2f6fc7;color:white;border:2px solid #7db4ff;border-radius:16px;font-size:30px;font-weight:900;padding:12px 38px}
 .modes button,.share{background:#2f6fc7;color:white;border:0;border-radius:14px;font-size:22px;font-weight:800;padding:15px;margin:9px;width:85%}
-.wait{color:#888;font-size:22px;background:#dcecf8}
-.loader{margin-top:18px;width:30px;height:30px;border:4px solid #c6cfd6;border-top-color:#666;border-radius:50%;animation:spin 1s linear infinite}
+.wait{color:#888;font-size:22px;background:#dcecf8}.loader{margin-top:18px;width:30px;height:30px;border:4px solid #c6cfd6;border-top-color:#666;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 .top{height:72px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #263246;background:#111827;color:#fff}
 .x{font-size:44px;margin-right:34px}.title{font-size:32px;font-weight:900}.icons{margin-left:auto;font-size:34px;display:flex;align-items:center;gap:18px}
 .musicBtn{width:50px;height:50px;border-radius:50%;border:2px solid #60a5fa;background:#2563eb;color:white;font-size:28px;font-weight:900}
-
 .player{display:flex;align-items:center;padding:12px 16px;min-height:88px;background:#111827;color:#fff}
-.avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#ccc}
+.avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#334155}
 .info{margin-left:12px;font-size:22px;font-weight:900}.rate{font-size:18px;font-weight:400;margin-top:4px;color:#cbd5e1}
 .timer{margin-left:auto;background:#dbeafe;color:#020617;border-radius:16px;padding:14px 22px;font-size:28px;font-weight:900}
-
 .board{width:100vw;height:100vw;position:relative;touch-action:none}
-.square{position:absolute;width:12.5%;height:12.5%}
-.light{background:#dbeafe}.dark{background:#7294bd}
+.square{position:absolute;width:12.5%;height:12.5%}.light{background:#dbeafe}.dark{background:#7294bd}
 .piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .06s linear;z-index:5}
-.piece img{width:88%;height:88%;pointer-events:none}
-.sel{box-shadow:inset 0 0 0 5px #facc15}
+.piece img{width:88%;height:88%;pointer-events:none}.sel{box-shadow:inset 0 0 0 5px #facc15}
 .move::after{content:"";width:25px;height:25px;background:rgba(80,80,80,.35);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
-.last{background:#eab308!important}
-.check{background:#ef4444!important}
-.msg{text-align:center;font-size:22px;margin:8px;color:#e5e7eb}
-
+.last{background:#eab308!important}.check{background:#ef4444!important}.msg{text-align:center;font-size:22px;margin:8px;color:#e5e7eb}
 .musicPanel{position:absolute;right:10px;top:85px;width:340px;max-width:94vw;background:#111827;border:1px solid #475569;border-radius:14px;padding:14px;z-index:20;display:none;box-shadow:0 15px 45px #0008;color:white}
-.musicHead{display:flex;align-items:center;font-size:22px;font-weight:900;margin-bottom:12px}
-.closeM{margin-left:auto;font-size:28px;cursor:pointer}
-.search{width:100%;background:#0f172a;border:1px solid #475569;border-radius:12px;padding:13px;color:white;font-size:17px;margin-bottom:12px}
+.musicHead{display:flex;align-items:center;font-size:22px;font-weight:900;margin-bottom:12px}.closeM{margin-left:auto;font-size:28px;cursor:pointer}
+.searchRow{display:flex;gap:8px}.search{flex:1;background:#0f172a;border:1px solid #475569;border-radius:12px;padding:13px;color:white;font-size:17px;margin-bottom:12px}
+.searchBtn{background:#2563eb;color:white;border:0;border-radius:12px;padding:0 14px;font-size:20px;height:48px}
 .song{display:flex;align-items:center;gap:10px;background:#1e293b;margin:8px 0;padding:9px;border-radius:12px}
-.cover{width:48px;height:48px;border-radius:9px;object-fit:cover;background:#334155}
-.songInfo{flex:1}
-.songInfo b{display:block;color:white;font-size:15px}
-.songInfo span{color:#94a3b8;font-size:13px}
-.playSmall{background:none;border:0;color:#e5e7eb;font-size:25px}
-.now{border-top:1px solid #475569;margin-top:12px;padding-top:12px;display:flex;align-items:center;gap:10px}
+.cover{width:48px;height:48px;border-radius:9px;object-fit:cover;background:#334155}.songInfo{flex:1}.songInfo b{display:block;color:white;font-size:15px}.songInfo span{color:#94a3b8;font-size:13px}
+.playSmall{background:none;border:0;color:#e5e7eb;font-size:25px}.now{border-top:1px solid #475569;margin-top:12px;padding-top:12px;display:flex;align-items:center;gap:10px}
 .progress{width:100%;accent-color:#2563eb}
-@media(max-width:650px){.musicPanel{left:10px;right:10px;width:auto}}
+@media(max-width:650px){.musicPanel{left:10px;right:10px;width:auto}.top{height:64px}.title{font-size:30px}.musicBtn{width:46px;height:46px}}
 </style>
 </head>
 <body>
@@ -94,34 +82,21 @@ body{margin:0;background:#0f172a;font-family:Arial;color:#eaf2ff;overflow:hidden
 
 <div id="game" style="display:none">
   <div class="top">
-    <div class="x">×</div>
-    <div class="title">Chess Now</div>
-    <div class="icons">
-      <span>⌄</span><span>⋮</span>
-      <button class="musicBtn" onclick="toggleMusic()">♫</button>
-    </div>
+    <div class="x">×</div><div class="title">Chess Now</div>
+    <div class="icons"><span>⌄</span><span>⋮</span><button class="musicBtn" onclick="toggleMusic()">♫</button></div>
   </div>
-
-  <div class="player">
-    <img class="avatar" id="topAvatar">
-    <div class="info" id="topName">Opponent<div class="rate">1200</div></div>
-    <div class="timer" id="topTimer">◷ 00:00</div>
-  </div>
-
+  <div class="player"><img class="avatar" id="topAvatar"><div class="info" id="topName">Opponent<div class="rate">1200</div></div><div class="timer" id="topTimer">◷ 00:00</div></div>
   <div class="board" id="board"></div>
-
-  <div class="player">
-    <img class="avatar" id="bottomAvatar">
-    <div class="info" id="bottomName">Me<div class="rate">1200</div></div>
-    <div class="timer" id="bottomTimer">◷ 00:00</div>
-  </div>
-
+  <div class="player"><img class="avatar" id="bottomAvatar"><div class="info" id="bottomName">Me<div class="rate">1200</div></div><div class="timer" id="bottomTimer">◷ 00:00</div></div>
   <div class="msg" id="msg">Loading...</div>
 </div>
 
 <div class="musicPanel" id="musicPanel">
   <div class="musicHead">🎵 Music Player <span class="closeM" onclick="toggleMusic()">×</span></div>
-  <input class="search" id="musicSearch" oninput="filterSongs()" placeholder="البحث عن أغنية...">
+  <div class="searchRow">
+    <input class="search" id="musicSearch" placeholder="اكتب اسم الأغنية...">
+    <button class="searchBtn" onclick="searchMusic()">🔍</button>
+  </div>
   <div style="color:#cbd5e1;margin:8px 0">نتائج البحث</div>
   <div id="songList"></div>
   <div class="now">
@@ -142,8 +117,7 @@ let ROLE="{{ role }}";
 let MINUTES={{ minutes }};
 
 let boardData=null, turn="w", over=false, selected=null, legal=[], dragging=null;
-let lastMove=[], checkSquare=null;
-let lastSoundId=0;
+let lastMove=[], checkSquare=null, lastSoundId=0;
 
 const boardEl=document.getElementById("board");
 const pieceBase="https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piece/cburnett/";
@@ -152,6 +126,25 @@ const soundMove=new Audio("https://images.chesscomfiles.com/chess-themes/sounds/
 const soundCapture=new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3");
 const soundCheck=new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3");
 
+function defaultAvatar(name){
+  const n=encodeURIComponent((name||"P")[0]||"P");
+  return `https://ui-avatars.com/api/?name=${n}&background=334155&color=ffffff&size=128`;
+}
+function getTGProfile(){
+  try{
+    const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if(u){
+      return {
+        id:String(u.id||Date.now()),
+        name:u.first_name || u.username || "Player",
+        avatar:u.photo_url || defaultAvatar(u.first_name || u.username || "P")
+      };
+    }
+  }catch(e){}
+  return {id:String(Date.now()), name:"Player", avatar:defaultAvatar("Player")};
+}
+let MY_PROFILE=getTGProfile();
+
 function playChessSound(t){
   let s=t==="check"?soundCheck:t==="capture"?soundCapture:soundMove;
   try{s.currentTime=0;s.play().catch(()=>{})}catch(e){}
@@ -159,40 +152,57 @@ function playChessSound(t){
 
 let musicAudio=new Audio();
 let currentSong=null;
-const songs=[
- {title:"Calm Piano",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
- {title:"Deep Focus",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
- {title:"Night Game",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
- {title:"Chess Mood",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"}
-];
 
 function toggleMusic(){
   const p=document.getElementById("musicPanel");
   p.style.display=p.style.display==="block"?"none":"block";
-  renderSongs(songs);
+}
+musicSearch.addEventListener("keydown",(e)=>{if(e.key==="Enter")searchMusic()});
+
+async function searchMusic(){
+  const q=musicSearch.value.trim();
+  if(!q)return;
+  songList.innerHTML='<div style="color:#94a3b8;padding:10px">جاري البحث...</div>';
+  try{
+    const r=await fetch(`/music_search?q=${encodeURIComponent(q)}`);
+    const data=await r.json();
+    renderSongs(data.results||[]);
+  }catch(e){
+    songList.innerHTML='<div style="color:#f87171;padding:10px">فشل البحث</div>';
+  }
 }
 function renderSongs(list){
-  const box=document.getElementById("songList"); box.innerHTML="";
+  songList.innerHTML="";
+  if(!list.length){
+    songList.innerHTML='<div style="color:#94a3b8;padding:10px">ماكو نتائج</div>';
+    return;
+  }
   list.forEach((s)=>{
     const d=document.createElement("div");
     d.className="song";
-    d.innerHTML=`<img class="cover" src="${s.cover}"><div class="songInfo"><b>${s.title}</b><span>${s.artist}</span></div><button class="playSmall">▶</button>`;
+    d.innerHTML=`<img class="cover" src="${s.cover||defaultAvatar('S')}"><div class="songInfo"><b>${s.title}</b><span>${s.artist||'SoundCloud'}</span></div><button class="playSmall">▶</button>`;
     d.querySelector("button").onclick=()=>playSong(s);
-    box.appendChild(d);
+    songList.appendChild(d);
   });
 }
-function filterSongs(){
-  const q=document.getElementById("musicSearch").value.toLowerCase();
-  renderSongs(songs.filter(s=>s.title.toLowerCase().includes(q)||s.artist.toLowerCase().includes(q)));
-}
-function playSong(s){
-  currentSong=s;
-  musicAudio.src=s.url;
-  musicAudio.play().catch(()=>{});
-  nowCover.src=s.cover;
-  nowTitle.innerText=s.title;
-  nowArtist.innerText=s.artist;
-  pauseBtn.innerText="⏸";
+async function playSong(s){
+  nowCover.src=s.cover||defaultAvatar("S");
+  nowTitle.innerText=s.title||"Song";
+  nowArtist.innerText="جاري التشغيل...";
+  pauseBtn.innerText="⏳";
+  try{
+    const r=await fetch(`/music_stream?url=${encodeURIComponent(s.url)}`);
+    const data=await r.json();
+    if(!data.audio)throw new Error("no audio");
+    currentSong=s;
+    musicAudio.src=data.audio;
+    await musicAudio.play();
+    nowArtist.innerText=s.artist||"SoundCloud";
+    pauseBtn.innerText="⏸";
+  }catch(e){
+    nowArtist.innerText="تعذر تشغيل الأغنية";
+    pauseBtn.innerText="▶";
+  }
 }
 function toggleAudio(){
   if(!currentSong)return;
@@ -206,7 +216,6 @@ function showOnly(id){
   document.getElementById(id).style.display=id==="game"?"block":"flex";
   if(id==="home")document.getElementById(id).style.display="block";
 }
-
 function showModes(){showOnly("modes")}
 
 function createGame(m){
@@ -214,7 +223,7 @@ function createGame(m){
   ROLE="w";
   MINUTES=m;
   history.replaceState(null,"",`/?game=${GAME_ID}&role=w&time=${m}`);
-  socket.emit("create_game",{game:GAME_ID,time:m,role:"w"});
+  socket.emit("create_game",{game:GAME_ID,time:m,role:"w",profile:MY_PROFILE});
   showOnly("wait");
 }
 
@@ -243,7 +252,6 @@ function drawSquares(){
     boardEl.appendChild(d);
   }
 }
-
 function drawPieces(){
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
     let p=getPiece(r,c); if(!p)continue;
@@ -259,42 +267,27 @@ function drawPieces(){
     boardEl.appendChild(el);
   }
 }
-
 function render(){drawSquares();if(boardData)drawPieces()}
 
 function tapSquare(sq){
   if(over)return;
   if((ROLE==="w"&&turn!=="w")||(ROLE==="b"&&turn!=="b"))return;
-  if(selected){
-    socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});
-    selected=null;legal=[];return;
-  }
+  if(selected){socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});selected=null;legal=[];return}
   socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
 }
-
 function startDrag(e,el,sq){
-  if(selected&&selected!==sq){
-    socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});
-    selected=null;legal=[];return;
-  }
+  if(selected&&selected!==sq){socket.emit("move",{game:GAME_ID,from:selected,to:sq,role:ROLE});selected=null;legal=[];return}
   if(over)return;
   if((ROLE==="w"&&turn!=="w")||(ROLE==="b"&&turn!=="b"))return;
-  selected=sq;
-  socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
-  dragging={el,sq};
-  el.style.transition="none";
-  el.setPointerCapture(e.pointerId);
-  moveDrag(e);
-  el.onpointermove=moveDrag;
-  el.onpointerup=endDrag;
+  selected=sq;socket.emit("legal",{game:GAME_ID,square:sq,role:ROLE});
+  dragging={el,sq};el.style.transition="none";el.setPointerCapture(e.pointerId);
+  moveDrag(e);el.onpointermove=moveDrag;el.onpointerup=endDrag;
 }
-
 function moveDrag(e){
   if(!dragging)return;
   const rect=boardEl.getBoundingClientRect(), size=rect.width/8;
   dragging.el.style.transform=`translate(${e.clientX-rect.left-size/2}px,${e.clientY-rect.top-size/2}px)`;
 }
-
 function endDrag(e){
   if(!dragging)return;
   const rect=boardEl.getBoundingClientRect(), size=rect.width/8;
@@ -307,10 +300,9 @@ function endDrag(e){
 
 socket.on("connect",()=>{
   if(GAME_ID && GAME_ID!=="new"){
-    socket.emit("join_game",{game:GAME_ID,role:ROLE,time:MINUTES});
+    socket.emit("join_game",{game:GAME_ID,role:ROLE,time:MINUTES,profile:MY_PROFILE});
   }
 });
-
 socket.on("state",(d)=>{
   boardData=d.board; turn=d.turn; over=d.over;
   lastMove=d.last_move||[]; checkSquare=d.check_square||null;
@@ -321,22 +313,16 @@ socket.on("state",(d)=>{
   topName.innerHTML=d.top_name+'<div class="rate">1200</div>';
   bottomName.innerHTML=d.bottom_name+'<div class="rate">1200</div>';
 
-  if(d.sound_id && d.sound_id !== lastSoundId){
-    lastSoundId=d.sound_id;
-    playChessSound(d.sound_type);
-  }
+  if(d.sound_id && d.sound_id !== lastSoundId){lastSoundId=d.sound_id;playChessSound(d.sound_type)}
 
   if(d.status==="waiting"){showOnly("wait");return}
   showOnly("game");
-
   topTimer.innerText="◷ "+fmt(d.top_time);
   bottomTimer.innerText="◷ "+fmt(d.bottom_time);
   msg.innerText=d.message;
   render();
-
   if(checkSquare)setTimeout(()=>{checkSquare=null;render()},450);
 });
-
 socket.on("legal_moves",(d)=>{selected=d.square;legal=d.moves;render()});
 
 if(GAME_ID==="new"){showOnly("home")}
@@ -346,8 +332,16 @@ else{showOnly("wait")}
 </html>
 """
 
-def default_avatar():
-    return "https://i.imgur.com/8Km9tLL.jpeg"
+def default_avatar(name="Player"):
+    safe = urllib.parse.quote((name or "P")[:1])
+    return f"https://ui-avatars.com/api/?name={safe}&background=334155&color=ffffff&size=128"
+
+def clean_profile(p, fallback):
+    if not isinstance(p, dict):
+        p = {}
+    name = p.get("name") or fallback
+    avatar = p.get("avatar") or default_avatar(name)
+    return {"name": str(name)[:40], "avatar": str(avatar)}
 
 def get_game(game_id, minutes=10):
     if game_id not in games:
@@ -360,8 +354,8 @@ def get_game(game_id, minutes=10):
             "status":"waiting",
             "white_name":"White",
             "black_name":"Opponent",
-            "white_avatar":default_avatar(),
-            "black_avatar":default_avatar(),
+            "white_avatar":default_avatar("White"),
+            "black_avatar":default_avatar("Opponent"),
             "last_move":[],
             "sound_id":0,
             "sound_type":"move"
@@ -430,9 +424,51 @@ def home():
     if game_id!="new": get_game(game_id,minutes)
     return render_template_string(HTML,game_id=game_id,role=role,minutes=minutes)
 
+@app.route("/music_search")
+def music_search():
+    q = request.args.get("q","").strip()
+    if not q:
+        return jsonify({"results":[]})
+    try:
+        import yt_dlp
+        ydl_opts = {"quiet": True, "skip_download": True, "extract_flat": True, "noplaylist": True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"scsearch10:{q}", download=False)
+        results=[]
+        for e in info.get("entries",[])[:10]:
+            title=e.get("title") or "SoundCloud"
+            url=e.get("url") or e.get("webpage_url")
+            if url and not str(url).startswith("http"):
+                url = "https://soundcloud.com/" + str(url)
+            results.append({
+                "title": title,
+                "artist": e.get("uploader") or "SoundCloud",
+                "cover": e.get("thumbnail") or default_avatar(title),
+                "url": url
+            })
+        return jsonify({"results":results})
+    except Exception as e:
+        return jsonify({"results":[],"error":str(e)})
+
+@app.route("/music_stream")
+def music_stream():
+    url=request.args.get("url","")
+    try:
+        import yt_dlp
+        ydl_opts={"quiet":True,"skip_download":True,"format":"bestaudio/best","noplaylist":True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info=ydl.extract_info(url,download=False)
+        audio=info.get("url")
+        return jsonify({"audio":audio})
+    except Exception as e:
+        return jsonify({"audio":None,"error":str(e)})
+
 @socketio.on("create_game")
 def create_game(data):
     g=get_game(data["game"],int(data.get("time",10)))
+    prof=clean_profile(data.get("profile"),"White")
+    g["white_name"]=prof["name"]
+    g["white_avatar"]=prof["avatar"]
     join_room(data["game"])
     emit_state(data["game"])
 
@@ -442,10 +478,16 @@ def join_game(data):
     role=data.get("role","w")
     minutes=int(data.get("time",10))
     g=get_game(game,minutes)
+    prof=clean_profile(data.get("profile"), "Black" if role=="b" else "White")
     join_room(game)
     if role=="b":
+        g["black_name"]=prof["name"]
+        g["black_avatar"]=prof["avatar"]
         g["status"]="playing"
         g["last"]=time.time()
+    else:
+        g["white_name"]=prof["name"]
+        g["white_avatar"]=prof["avatar"]
     emit_state(game)
 
 @socketio.on("get_state")
