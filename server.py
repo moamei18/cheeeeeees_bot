@@ -5,7 +5,7 @@ import chess
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "PUT_YOUR_TOKEN_HERE"
+TOKEN = "8526200321:AAGw7sJ2QkP0hUwQAd_OZKDCOQjaKWBligw"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 app = Flask(__name__)
