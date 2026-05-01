@@ -6,7 +6,7 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 TOKEN = "8526200321:AAG-Iaga_t26sPEB45cxpZcwjqyXCda587c"
-BOT_USERNAME = "@cheesfadi_bot"
+BOT_USERNAME = "cheesfadi_bot"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 app = Flask(__name__)
