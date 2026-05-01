@@ -4,7 +4,7 @@ import os, time, threading
 import chess
 import telebot
 
-TOKEN = "8526200321:AAFPUduxPtVVpNJ2RLjV3iiK0zdxduEz4PM"
+TOKEN = "8526200321:AAGwGBc1aYwwVsVYspk0ivlRda8ZKVNFm_M"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 GAME_SHORT_NAME = "fadichess"
 
