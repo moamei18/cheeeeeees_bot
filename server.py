@@ -5,7 +5,7 @@ import chess
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = "8526200321:AAHfDanbyBvlF4CeoyIk79NPGiccu4a5uY0"
+TOKEN = "PUT_YOUR_TOKEN_HERE"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
 app = Flask(__name__)
@@ -23,32 +23,50 @@ HTML = """
 <title>Fadi Chess</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
-body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow:hidden}
+body{margin:0;background:#0f172a;font-family:Arial;color:#eaf2ff;overflow:hidden}
 .screen{height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column}
 .home{background:#111827;color:white;text-align:left;padding:35px;width:100%;height:100vh;box-sizing:border-box}
 .home h1{font-size:42px;margin:45px 0 5px}
 .home p{font-size:22px;color:#cbd5e1;margin:0 0 25px}
 .play{background:#2f6fc7;color:white;border:2px solid #7db4ff;border-radius:16px;font-size:34px;font-weight:900;padding:12px 38px}
 .modes button,.share{background:#2f6fc7;color:white;border:0;border-radius:14px;font-size:22px;font-weight:800;padding:15px;margin:9px;width:85%}
-.wait{color:#888;font-size:22px}
+.wait{color:#888;font-size:22px;background:#dcecf8}
 .loader{margin-top:18px;width:30px;height:30px;border:4px solid #c6cfd6;border-top-color:#666;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.top{height:72px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #c8d6e0}
-.x{font-size:44px;margin-right:34px}.title{font-size:32px;font-weight:900}.icons{margin-left:auto;font-size:34px}
-.player{display:flex;align-items:center;padding:12px 16px;min-height:88px}
+
+.top{height:72px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid #263246;background:#111827;color:#fff}
+.x{font-size:44px;margin-right:34px}.title{font-size:32px;font-weight:900}.icons{margin-left:auto;font-size:34px;display:flex;align-items:center;gap:18px}
+.musicBtn{width:50px;height:50px;border-radius:50%;border:2px solid #60a5fa;background:#2563eb;color:white;font-size:28px;font-weight:900}
+
+.player{display:flex;align-items:center;padding:12px 16px;min-height:88px;background:#111827;color:#fff}
 .avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#ccc}
-.info{margin-left:12px;font-size:22px;font-weight:900}.rate{font-size:18px;font-weight:400;margin-top:4px}
-.timer{margin-left:auto;background:#cfe0ee;border-radius:16px;padding:14px 22px;font-size:28px;font-weight:900}
+.info{margin-left:12px;font-size:22px;font-weight:900}.rate{font-size:18px;font-weight:400;margin-top:4px;color:#cbd5e1}
+.timer{margin-left:auto;background:#dbeafe;color:#020617;border-radius:16px;padding:14px 22px;font-size:28px;font-weight:900}
+
 .board{width:100vw;height:100vw;position:relative;touch-action:none}
 .square{position:absolute;width:12.5%;height:12.5%}
-.light{background:#f0d9b5}.dark{background:#b88762}
+.light{background:#dbeafe}.dark{background:#7294bd}
 .piece{position:absolute;width:12.5%;height:12.5%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;transition:transform .06s linear;z-index:5}
 .piece img{width:88%;height:88%;pointer-events:none}
-.sel{box-shadow:inset 0 0 0 5px #d8c52c}
+.sel{box-shadow:inset 0 0 0 5px #facc15}
 .move::after{content:"";width:25px;height:25px;background:rgba(80,80,80,.35);border-radius:50%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
-.last{background:#d7c52d!important}
-.check{background:#e35b5b!important}
-.msg{text-align:center;font-size:22px;margin:8px}
+.last{background:#eab308!important}
+.check{background:#ef4444!important}
+.msg{text-align:center;font-size:22px;margin:8px;color:#e5e7eb}
+
+.musicPanel{position:absolute;right:10px;top:85px;width:340px;max-width:94vw;background:#111827;border:1px solid #475569;border-radius:14px;padding:14px;z-index:20;display:none;box-shadow:0 15px 45px #0008;color:white}
+.musicHead{display:flex;align-items:center;font-size:22px;font-weight:900;margin-bottom:12px}
+.closeM{margin-left:auto;font-size:28px;cursor:pointer}
+.search{width:100%;background:#0f172a;border:1px solid #475569;border-radius:12px;padding:13px;color:white;font-size:17px;margin-bottom:12px}
+.song{display:flex;align-items:center;gap:10px;background:#1e293b;margin:8px 0;padding:9px;border-radius:12px}
+.cover{width:48px;height:48px;border-radius:9px;object-fit:cover;background:#334155}
+.songInfo{flex:1}
+.songInfo b{display:block;color:white;font-size:15px}
+.songInfo span{color:#94a3b8;font-size:13px}
+.playSmall{background:none;border:0;color:#e5e7eb;font-size:25px}
+.now{border-top:1px solid #475569;margin-top:12px;padding-top:12px;display:flex;align-items:center;gap:10px}
+.progress{width:100%;accent-color:#2563eb}
+@media(max-width:650px){.musicPanel{left:10px;right:10px;width:auto}}
 </style>
 </head>
 <body>
@@ -60,7 +78,7 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow:hidden}
   <div style="margin-top:35px;color:#f7c948;font-size:22px;font-weight:bold">♟ Challenge • Think • Win</div>
 </div>
 
-<div id="modes" class="screen modes" style="display:none">
+<div id="modes" class="screen modes" style="display:none;background:#dcecf8;color:#000">
   <h1>اختر الوقت</h1>
   <button onclick="createGame(1)">Bullet 1:00</button>
   <button onclick="createGame(3)">Blitz 3:00</button>
@@ -75,19 +93,46 @@ body{margin:0;background:#dcecf8;font-family:Arial;color:#000;overflow:hidden}
 </div>
 
 <div id="game" style="display:none">
-  <div class="top"><div class="x">×</div><div class="title">Chess Now</div><div class="icons">⌄ ⋮</div></div>
+  <div class="top">
+    <div class="x">×</div>
+    <div class="title">Chess Now</div>
+    <div class="icons">
+      <span>⌄</span><span>⋮</span>
+      <button class="musicBtn" onclick="toggleMusic()">♫</button>
+    </div>
+  </div>
+
   <div class="player">
     <img class="avatar" id="topAvatar">
     <div class="info" id="topName">Opponent<div class="rate">1200</div></div>
     <div class="timer" id="topTimer">◷ 00:00</div>
   </div>
+
   <div class="board" id="board"></div>
+
   <div class="player">
     <img class="avatar" id="bottomAvatar">
     <div class="info" id="bottomName">Me<div class="rate">1200</div></div>
     <div class="timer" id="bottomTimer">◷ 00:00</div>
   </div>
+
   <div class="msg" id="msg">Loading...</div>
+</div>
+
+<div class="musicPanel" id="musicPanel">
+  <div class="musicHead">🎵 Music Player <span class="closeM" onclick="toggleMusic()">×</span></div>
+  <input class="search" id="musicSearch" oninput="filterSongs()" placeholder="البحث عن أغنية...">
+  <div style="color:#cbd5e1;margin:8px 0">نتائج البحث</div>
+  <div id="songList"></div>
+  <div class="now">
+    <img class="cover" id="nowCover">
+    <div style="flex:1">
+      <b id="nowTitle">اختر أغنية</b>
+      <span id="nowArtist">تشتغل لك وحدك فقط</span>
+      <input class="progress" id="progress" type="range" value="0" min="0" max="100">
+    </div>
+    <button class="playSmall" id="pauseBtn" onclick="toggleAudio()">▶</button>
+  </div>
 </div>
 
 <script>
@@ -98,9 +143,63 @@ let MINUTES={{ minutes }};
 
 let boardData=null, turn="w", over=false, selected=null, legal=[], dragging=null;
 let lastMove=[], checkSquare=null;
+let lastSoundId=0;
 
 const boardEl=document.getElementById("board");
 const pieceBase="https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piece/cburnett/";
+
+const soundMove=new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3");
+const soundCapture=new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3");
+const soundCheck=new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3");
+
+function playChessSound(t){
+  let s=t==="check"?soundCheck:t==="capture"?soundCapture:soundMove;
+  try{s.currentTime=0;s.play().catch(()=>{})}catch(e){}
+}
+
+let musicAudio=new Audio();
+let currentSong=null;
+const songs=[
+ {title:"Calm Piano",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
+ {title:"Deep Focus",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
+ {title:"Night Game",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"},
+ {title:"Chess Mood",artist:"Background",url:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",cover:"https://i.imgur.com/8Km9tLL.jpeg"}
+];
+
+function toggleMusic(){
+  const p=document.getElementById("musicPanel");
+  p.style.display=p.style.display==="block"?"none":"block";
+  renderSongs(songs);
+}
+function renderSongs(list){
+  const box=document.getElementById("songList"); box.innerHTML="";
+  list.forEach((s)=>{
+    const d=document.createElement("div");
+    d.className="song";
+    d.innerHTML=`<img class="cover" src="${s.cover}"><div class="songInfo"><b>${s.title}</b><span>${s.artist}</span></div><button class="playSmall">▶</button>`;
+    d.querySelector("button").onclick=()=>playSong(s);
+    box.appendChild(d);
+  });
+}
+function filterSongs(){
+  const q=document.getElementById("musicSearch").value.toLowerCase();
+  renderSongs(songs.filter(s=>s.title.toLowerCase().includes(q)||s.artist.toLowerCase().includes(q)));
+}
+function playSong(s){
+  currentSong=s;
+  musicAudio.src=s.url;
+  musicAudio.play().catch(()=>{});
+  nowCover.src=s.cover;
+  nowTitle.innerText=s.title;
+  nowArtist.innerText=s.artist;
+  pauseBtn.innerText="⏸";
+}
+function toggleAudio(){
+  if(!currentSong)return;
+  if(musicAudio.paused){musicAudio.play();pauseBtn.innerText="⏸"}else{musicAudio.pause();pauseBtn.innerText="▶"}
+}
+musicAudio.ontimeupdate=()=>{if(musicAudio.duration)progress.value=(musicAudio.currentTime/musicAudio.duration)*100}
+progress.oninput=()=>{if(musicAudio.duration)musicAudio.currentTime=(progress.value/100)*musicAudio.duration}
 
 function showOnly(id){
   ["home","modes","wait","game"].forEach(x=>document.getElementById(x).style.display="none");
@@ -222,6 +321,11 @@ socket.on("state",(d)=>{
   topName.innerHTML=d.top_name+'<div class="rate">1200</div>';
   bottomName.innerHTML=d.bottom_name+'<div class="rate">1200</div>';
 
+  if(d.sound_id && d.sound_id !== lastSoundId){
+    lastSoundId=d.sound_id;
+    playChessSound(d.sound_type);
+  }
+
   if(d.status==="waiting"){showOnly("wait");return}
   showOnly("game");
 
@@ -258,7 +362,9 @@ def get_game(game_id, minutes=10):
             "black_name":"Opponent",
             "white_avatar":default_avatar(),
             "black_avatar":default_avatar(),
-            "last_move":[]
+            "last_move":[],
+            "sound_id":0,
+            "sound_type":"move"
         }
     return games[game_id]
 
@@ -311,7 +417,9 @@ def emit_state(game_id):
         "top_avatar":g["black_avatar"],
         "bottom_avatar":g["white_avatar"],
         "top_time":int(g["black_time"]),
-        "bottom_time":int(g["white_time"])
+        "bottom_time":int(g["white_time"]),
+        "sound_id":g["sound_id"],
+        "sound_type":g["sound_type"]
     }, room=game_id)
 
 @app.route("/")
@@ -368,9 +476,12 @@ def move(data):
         mv=chess.Move.from_uci(data["from"]+data["to"])
         if mv not in b.legal_moves: mv=chess.Move.from_uci(data["from"]+data["to"]+"q")
         if mv in b.legal_moves:
+            is_capture=b.is_capture(mv)
             b.push(mv)
             g["last_move"]=[data["from"],data["to"]]
             g["last"]=time.time()
+            g["sound_id"]+=1
+            g["sound_type"]="check" if b.is_check() else "capture" if is_capture else "move"
             emit_state(data["game"])
     except: pass
 
