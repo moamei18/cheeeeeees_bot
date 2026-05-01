@@ -5,7 +5,7 @@ import chess
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
-TOKEN = "8526200321:AAG-Iaga_t26sPEB45cxpZcwjqyXCda587c"
+TOKEN = "8526200321:AAFHUkVPU2r_-qh2ApmfcCiwMf7deGUbhaE"
 BOT_USERNAME = "cheesfadi_bot"
 WEB_LINK = "https://cheeeeeeesbot-production.up.railway.app"
 
